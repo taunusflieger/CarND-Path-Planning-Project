@@ -1,0 +1,33 @@
+{
+    "viz" : {
+        "w" : 1300,
+        "h" : 1000,
+        "translate" : {
+            "x" : 0.0,
+            "y" : -1000.0
+        },
+        "scale" : 0.45
+    },
+    "x_debug" : {
+        "initial-s" : 2400.0
+    },
+
+    "laneWidth" : 4.0,
+    "numLanes" : 3,
+    "targetSpeed" : 20.8,
+    "speedLimit" : 22.352,
+    "speedIncrease" : 0.08,
+    "speedTolerance" : 0.2,
+    "planAhead" : 50.0,
+    "collisionBuffer" : 3.0,
+    "sensor" : {
+        "range-front" : 100.0,
+        "range-back" : 30.0
+    },
+    "trajectory" : {
+        "waypoint-dist" : 30.0,
+        "trajectory-length" : 120.0,
+        "trajectory-min" : 50.0,
+        "reuse-n-points" : 40
+    }
+}
