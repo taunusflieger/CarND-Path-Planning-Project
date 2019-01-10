@@ -11,7 +11,9 @@
     "x_debug" : {
         "initial-s" : 2400.0
     },
-
+    "centerX" : 1000,
+    "centerY" : 2000,
+    "trackLength" : 6945.554,
     "laneWidth" : 4.0,
     "numLanes" : 3,
     "targetSpeed" : 20.8,

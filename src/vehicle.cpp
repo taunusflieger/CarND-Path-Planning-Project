@@ -6,7 +6,7 @@
 
 const std::string  Vehicle::stateNames_[] =   {"Normal","Follow Vehicle In Front", "Change To Left Lane", "Change To Right Lane" };   
 
-Vehicle::Vehicle(const Map& map) : map_(map) {
+Vehicle::Vehicle(const Map& map, const Config& cfg) : map_(map), cfg_(cfg) {
     
   
 }

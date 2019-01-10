@@ -39,6 +39,15 @@ double Config::VizScale() {
     return j["viz"]["scale"];
 }
 
+
+double Config::centerX() {
+    return j["centerX"];
+}
+
+double Config::centerY() {
+    return j["centerY"];
+}
+
 double Config::laneWidth() {
     return j["laneWidth"];
 }
@@ -53,6 +62,10 @@ double Config::sensorRangeBack() {
 
 int Config::numLanes() {
     return j["numLanes"];
+}
+
+double Config::trackLength() {
+    return j["trackLength"];
 }
 
 double Config::targetSpeed() {

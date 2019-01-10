@@ -59,7 +59,7 @@ void Map::LoadData(string& filename) {
 	// to get a good spline approximation on last segment wrapping around
 	map_waypoints_x_.push_back(map_waypoints_x_.front());
 	map_waypoints_y_.push_back(map_waypoints_y_.front());
-	map_waypoints_s_.push_back(MAX_S);
+	map_waypoints_s_.push_back(cfg_.trackLength());
 	map_waypoints_dx_.push_back(map_waypoints_dx_.front());
 	map_waypoints_dy_.push_back(map_waypoints_dy_.front());
 
@@ -91,7 +91,7 @@ void Map::LoadData(string& filename) {
   	prev_x = spline_x_(0);
   	prev_y = spline_y_(0);
 	int idx = 0;
-  	for (double s = 1; s <= floor(MAX_S); s++) {
+  	for (double s = 1; s <= floor(cfg_.trackLength()); s++) {
 		double x = spline_x_(s);
 		double y = spline_y_(s);
 		double dist = distance(x, y, prev_x, prev_y);
@@ -262,8 +262,8 @@ vector<double> Map::getFrenet(double x, double y, double theta)
 
 	//see if d value is positive or negative by comparing it to a center point
 
-	double center_x = PARAM_CENTER_X - high_res_map_waypoints_x_[prev_wp];
-	double center_y = PARAM_CENTER_Y - high_res_map_waypoints_y_[prev_wp];
+	double center_x = cfg_.centerX() - high_res_map_waypoints_x_[prev_wp];
+	double center_y = cfg_.centerY() - high_res_map_waypoints_y_[prev_wp];
 	double centerToPos = distance(center_x,center_y,x_x,x_y);
 	double centerToRef = distance(center_x,center_y,proj_x,proj_y);
 

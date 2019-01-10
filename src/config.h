@@ -18,6 +18,11 @@ public:
     double VizTranslateY();
     double VizScale();
     double laneWidth();
+
+    // center point of the track
+    double centerX();
+    double centerY();
+    double trackLength();
     int numLanes();
     double sensorRangeFront();
     double sensorRangeBack();

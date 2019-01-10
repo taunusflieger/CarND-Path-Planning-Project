@@ -52,8 +52,8 @@ int main(int argc, char **argv) {
 
 
 	Config cfg;
-	Map map;
-	Vehicle vehicle(map);
+	Map map(cfg);
+	Vehicle vehicle(map, cfg);
 
 	cfg.Load("config.json");
 	cout << cfg.numLanes() << endl;
@@ -95,6 +95,11 @@ int main(int argc, char **argv) {
           	double end_path_s = j[1]["end_path_s"];
           	double end_path_d = j[1]["end_path_d"];
 
+
+            /////////////////////////////////////////
+            // Sensor Fusion
+            /////////////////////////////////////////
+
           	// Sensor Fusion Data, a list of all other cars on the same side of the road.
           	auto sensor_fusion = j[1]["sensor_fusion"];
 
@@ -112,6 +117,26 @@ int main(int argc, char **argv) {
 								sfd.s = sensor_fusion [i][5];
 								sfd.d = sensor_fusion [i][6];
 						}
+
+  
+            /////////////////////////////////////////
+            // Localization
+            /////////////////////////////////////////
+        
+
+            /////////////////////////////////////////
+            // Trajectory
+            /////////////////////////////////////////
+
+            
+            /////////////////////////////////////////
+            // Prediction
+            /////////////////////////////////////////
+
+
+            /////////////////////////////////////////
+            // Behavior Planning
+            /////////////////////////////////////////
 
 
 

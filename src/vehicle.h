@@ -3,6 +3,7 @@
 #include "map.h"
 #include "fsm.h"
 #include "types.h"
+#include "config.h"
 
 
 
@@ -10,6 +11,7 @@ class Vehicle
 {
 private:
     Map map_;
+    Config cfg_;
     vector<SensorFusionData> sensorFusionData_; 
     CarLocalizationData locData;
     
@@ -23,7 +25,7 @@ private:
     void printStatus(void);
 
 public:
-    Vehicle(const Map& map);
+    Vehicle(const Map& map, const Config& cfg);
     ~Vehicle() {};
 
     void updateTrajectory(const CarLocalizationData& newloc, const std::vector<double>& previous_path_x, const std::vector<double>& previous_path_y);

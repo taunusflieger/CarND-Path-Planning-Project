@@ -3,21 +3,10 @@
 #include <vector>
 #include "json.hpp"
 #include "spline.h"
+#include "config.h"
 
 using namespace std;
 using namespace tk;
-
-// The max s value before wrapping around the track back to 0
-const double MAX_S = 6945.554;
-
-// center point of the track
-const double PARAM_CENTER_X = 1000;
-const double PARAM_CENTER_Y = 2000;
-
-
-
-
-
 
 class Map {
   private:
@@ -25,6 +14,8 @@ class Map {
       double value;
       int index;
     };
+    
+    Config cfg_;
 
     spline spline_x_;
     spline spline_y_;
@@ -50,7 +41,7 @@ class Map {
     vector<PointIdx> high_res_map_waypoints_sorted_y_;
 
   public:
-    Map() {};
+    Map(const Config& cfg) : cfg_(cfg){};
     ~Map() {};
 
     void LoadData(string& filename);
