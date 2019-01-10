@@ -1,5 +1,5 @@
-#ifndef MAP_H
-#define MAP_H
+#pragma once
+
 #include <vector>
 #include "json.hpp"
 #include "spline.h"
@@ -64,5 +64,3 @@ class Map {
     vector<double> getFrenet(double x, double y, double theta);
     void plot(void);
 };
-
-#endif

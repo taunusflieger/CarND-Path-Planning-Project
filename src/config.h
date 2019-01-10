@@ -1,5 +1,4 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
 
 #include <memory>
 #include <experimental/optional>
@@ -46,4 +45,3 @@ private:
 };
 
 
-#endif // CONFIG_H

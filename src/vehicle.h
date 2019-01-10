@@ -1,5 +1,5 @@
-#ifndef VEHICLE_H
-#define VEHICLE_H
+#pragma once
+
 #include "map.h"
 #include "fsm.h"
 #include "types.h"
@@ -31,4 +31,3 @@ public:
   
 };
 
-#endif

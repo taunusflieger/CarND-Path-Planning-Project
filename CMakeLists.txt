@@ -2,9 +2,14 @@ project(Path_Planning)
 
 cmake_minimum_required (VERSION 3.5)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_FLAGS "-Wall -fpermissive -Wno-unused-parameter -Werror")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ggdb3 -DNDEBUG")
+set(CMAKE_CXX_FLAGS "-std=c++17")
+
 
 add_definitions(-std=c++11)
 

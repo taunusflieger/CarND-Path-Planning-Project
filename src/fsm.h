@@ -1,5 +1,4 @@
-#ifndef FSM_H
-#define FSM_H
+#pragma once
 
 /**
 The MIT License (MIT)
@@ -376,4 +375,3 @@ public:
 
 } // end namespace FSM
 
-#endif // FSM_H
