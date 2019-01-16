@@ -1,21 +1,21 @@
-#include "Eigen-3.3/Eigen/Core"
-#include "Eigen-3.3/Eigen/QR"
-#include "config.h"
-#include "json.hpp"
-#include "map.h"
-#include "spline.h"
-#include "trajectory.h"
-#include "types.h"
-#include "vehicle.h"
-#include <chrono>
-#include <fstream>
-#include <iostream>
-#include <math.h>
 #include <sys/time.h>
-#include <thread>
+#include <fstream>
+#include <math.h>
 #include <uWS/uWS.h>
+#include <chrono>
+#include <iostream>
+#include <thread>
 #include <unistd.h>
 #include <vector>
+#include "Eigen-3.3/Eigen/Core"
+#include "Eigen-3.3/Eigen/QR"
+#include "json.hpp"
+#include "spline.h"
+#include "config.h"
+#include "map.h"
+#include "vehicle.h"
+#include "types.h"
+#include "trajectory.h"
 
 
 using namespace std;

@@ -23,8 +23,6 @@
     "git.allowForcePush": true,
     "editor.tabSize": 2,
     "C_Cpp.clang_format_fallbackStyle": "{BasedOnStyle: Google, IndentWidth: 2}",
-    "editor.formatOnSave": true,
-    "editor.formatOnPaste": true,
     "editor.formatOnType": true,
     "clang-format.executable": "/usr/local/Cellar/clang-format/2018-12-18/bin/clang-format"
 }
