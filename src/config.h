@@ -7,46 +7,42 @@ using namespace std;
 
 class Config
 {
-public:
-    Config();
+    private:
+       
 
-    bool Load(string filename);
+        bool loaded;
 
-    int w();
-    int h();
-    double VizTranslateX();
-    double VizTranslateY();
-    double VizScale();
-    double laneWidth();
-
-    // center point of the track
-    double centerX();
-    double centerY();
-    double trackLength();
-    int numLanes();
-    double sensorRangeFront();
-    double sensorRangeBack();
-    double targetSpeed();
-    double speedLimit();
-    double planAhead();
-
-    double trajectoryWaypointDist();
-    double trajectoryTrajectoryLength();
-    double trajectoryTrajectoryMin();
-    double trajectoryReuseNPoints();
-
-    double speedIncrease();
-    double speedTolerance();
-    double collisionBuffer();
-
-    double initialS();
+        nlohmann::json j;   
+    public:
+        Config() { loaded = false;};
+        bool Load(string filename);
 
 
+        double laneWidth();
+        int dbgMain();
 
-private:
-    static Config *_instance;
-    
-    nlohmann::json j;
+        // center point of the track
+        double centerX();
+        double centerY();
+        double trackLength();
+        int numLanes();
+        int pathSizeCutOff();
+        double sensorRangeFront();
+        double sensorRangeBack();
+        double targetSpeed();
+        double speedLimit();
+        double planAhead();
+        double timeIncrement();
+
+        double trajectoryWaypointDist();
+        double trajectoryTrajectoryLength();
+        double trajectoryTrajectoryMin();
+        double trajectoryReuseNPoints();
+        double traverseTime();
+
+        double speedIncrease();
+        double speedTolerance();
+        double collisionBuffer();
+
+        double initialS(); 
 };
-
-

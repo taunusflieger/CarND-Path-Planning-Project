@@ -6,37 +6,18 @@
 using json = nlohmann::json;
 
 
-Config::Config() 
-{
-    
-
-}
-
 bool Config::Load(string filename) {
     std::ifstream ifs(filename);
     
     j = json::parse(ifs);
+    loaded = true;
     return true;
 }
 
-int Config::w() {
-    return j["viz"]["w"];
-}
 
-int Config::h() {
-    return j["viz"]["h"];
-}
 
-double Config::VizTranslateX() {
-    return j["viz"]["translate"]["x"];
-}
-
-double Config::VizTranslateY() {
-    return j["viz"]["translate"]["y"];
-}
-
-double Config::VizScale() {
-    return j["viz"]["scale"];
+int Config::dbgMain() {
+    return j["dbgMain"];
 }
 
 
@@ -109,8 +90,14 @@ double Config::speedTolerance()  {
     return j["speedTolerance"];
 }
 
-
-double Config::initialS() {
-    return j["initial-s"];
+int Config::pathSizeCutOff() {
+    return j["pathSizeCutOff"];
 }
 
+double Config::timeIncrement()  {
+    return j["timeIncrement"];
+}
+
+double Config::traverseTime() {
+    return j["traverseTime"];
+}

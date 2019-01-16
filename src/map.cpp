@@ -15,10 +15,16 @@ namespace plt = matplotlibcpp;
 inline double deg2rad(double x) { return x * M_PI/ 180; }
 inline double rad2deg(double x) { return x * 180 / M_PI; }
 
+
+
+
+
 void Map::LoadData(string& filename) {
     ifstream in_map_(filename.c_str(), ifstream::in);
 
     string line;
+	
+	cout << "Speed Limit: " << cfg_.speedLimit() << endl;
 	double prev_x, prev_y;
 	double max_dist = 0, min_dist = MAXFLOAT;
 	double total_dist = 0;
@@ -91,7 +97,7 @@ void Map::LoadData(string& filename) {
   	prev_x = spline_x_(0);
   	prev_y = spline_y_(0);
 	int idx = 0;
-  	for (double s = 1; s <= floor(cfg_.trackLength()); s++) {
+  	for (double s = 0; s <= floor(cfg_.trackLength()); s++) {
 		double x = spline_x_(s);
 		double y = spline_y_(s);
 		double dist = distance(x, y, prev_x, prev_y);
@@ -111,8 +117,6 @@ void Map::LoadData(string& filename) {
 		high_res_map_waypoints_dy_.push_back(spline_dy_(s));
 		high_res_map_waypoints_s_.push_back(s);
 		
-		high_res_map_waypoints_sorted_x_.push_back({x, idx});
-		high_res_map_waypoints_sorted_y_.push_back({y, idx});
 		
 		//cout << x << "\t" << idx << endl;
 		idx++;
@@ -123,15 +127,6 @@ void Map::LoadData(string& filename) {
 	cout << "                                  avg = " << total_dist / (double)idx << "m" << endl;  
 	cout << "Number of points = " << idx-1 << endl;
 
-	// Create sorted vectors of x and y components of the waypoints
-	// to speed up finding closest waypoints
-	std::sort(high_res_map_waypoints_sorted_x_.begin(), high_res_map_waypoints_sorted_x_.end(), [](PointIdx a, PointIdx b) {
-        	return a.value < b.value;   
-    	});
-
-	std::sort(high_res_map_waypoints_sorted_y_.begin(), high_res_map_waypoints_sorted_y_.end(), [](PointIdx a, PointIdx b) {
-        	return a.value < b.value;   
-    	});
 
 	/* for (auto p : high_res_map_waypoints_sorted_x_) {
         cout << p.value << " " << p.index << endl;
@@ -211,6 +206,27 @@ int Map::ClosestWaypoint(double x, double y)
 }
 
   
+XYPoints Map::makePath(JMT jmt_s, JMT jmt_d, const double t, const int n)  {
+
+  vector<double> xs;
+  vector<double> ys;
+  vector<double> p;
+
+  for (int i = 0; i < n; i++) {
+
+    double s = jmt_s.get(i * t);
+    double d = jmt_d.get(i * t);
+
+    vector<double> p = getXY(s, d);
+
+    xs.push_back(p[0]);
+    ys.push_back(p[1]);
+  }
+
+  XYPoints path = {xs, ys, n};
+
+  return path;
+}
 
 int Map::NextWaypoint(double x, double y, double theta)
 {
@@ -288,25 +304,53 @@ vector<double> Map::getFrenet(double x, double y, double theta)
 
 }
 
+// Transform from Frenet s,d coordinates to Cartesian x,y
+vector<double> Map::getXY2(double s, double d) {
+  vector<double> &maps_s = map_waypoints_s_; 
+  vector<double> &maps_x = map_waypoints_x_;
+  vector<double> &maps_y = map_waypoints_y_;
+
+	int prev_wp = -1;
+
+	while(s > maps_s[prev_wp+1] && (prev_wp < (int)(maps_s.size()-1) )) {
+		prev_wp++;
+	}
+
+	int wp2 = (prev_wp+1)%maps_x.size();
+
+	double heading = atan2((maps_y[wp2]-maps_y[prev_wp]),(maps_x[wp2]-maps_x[prev_wp]));
+	// the x,y,s along the segment
+	double seg_s = (s-maps_s[prev_wp]);
+
+	double seg_x = maps_x[prev_wp]+seg_s*cos(heading);
+	double seg_y = maps_y[prev_wp]+seg_s*sin(heading);
+
+	double perp_heading = heading-M_PI/2;
+
+	double x = seg_x + d*cos(perp_heading);
+	double y = seg_y + d*sin(perp_heading);
+
+	return {x,y};
+}
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
 vector<double> Map::getXY(double s, double d)
 {
 	int prev_wp = -1;
 
-	while(s > map_waypoints_s_[prev_wp+1] && (prev_wp < (int)(map_waypoints_s_.size()-1) ))
+	while(s > high_res_map_waypoints_s_[prev_wp+1] && (prev_wp < (int)(high_res_map_waypoints_s_.size()-1) ))
 	{
 		prev_wp++;
 	}
 
-	int wp2 = (prev_wp+1) % map_waypoints_x_.size();
+	int wp2 = (prev_wp+1) % high_res_map_waypoints_x_.size();
 
-	double heading = atan2((map_waypoints_y_[wp2]-map_waypoints_y_[prev_wp]),(map_waypoints_x_[wp2]-map_waypoints_x_[prev_wp]));
+	double heading = atan2((high_res_map_waypoints_y_[wp2]-high_res_map_waypoints_y_[prev_wp]),(high_res_map_waypoints_x_[wp2]-high_res_map_waypoints_x_[prev_wp]));
 	// the x,y,s along the segment
-	double seg_s = (s-map_waypoints_s_[prev_wp]);
+	double seg_s = (s-high_res_map_waypoints_s_[prev_wp]);
 
-	double seg_x = map_waypoints_x_[prev_wp]+seg_s*cos(heading);
-	double seg_y = map_waypoints_y_[prev_wp]+seg_s*sin(heading);
+	double seg_x = high_res_map_waypoints_x_[prev_wp]+seg_s*cos(heading);
+	double seg_y = high_res_map_waypoints_y_[prev_wp]+seg_s*sin(heading);
 
 	double perp_heading = heading - M_PI/2;
 
@@ -317,6 +361,13 @@ vector<double> Map::getXY(double s, double d)
 
 }
 
+vector<double> Map::getXYspline(double s, double d) {
+  	s = fmod(s, cfg_.trackLength()); 
+	double x = spline_x_(s) + d * spline_dx_(s);
+	double y = spline_y_(s) + d * spline_dy_(s);
+
+	return {x,y};
+}
 
 void Map::plot(void) {
 	plt::title("Map");

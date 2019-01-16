@@ -1,5 +1,4 @@
 {
-    "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
     "files.associations": {
         "iterator": "cpp",
         "__config": "cpp",
@@ -12,6 +11,14 @@
         "type_traits": "cpp",
         "typeinfo": "cpp",
         "algorithm": "cpp",
-        "vector": "cpp"
-    }
+        "vector": "cpp",
+        "iosfwd": "cpp",
+        "functional": "cpp"
+    },
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 10000,
+    "explorer.openEditors.visible": 10,
+    "debug.inlineValues": true,
+    "breadcrumbs.enabled": true,
+    "git.allowForcePush": true,
 }
