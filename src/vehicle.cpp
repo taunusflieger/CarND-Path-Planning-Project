@@ -1,26 +1,24 @@
 #include "vehicle.h"
 
-Vehicle::Vehicle(const int i, Config& cfg) : id(i), cfg_(cfg) {
+Vehicle::Vehicle(const int i, Config &cfg) : id(i), cfg_(cfg) {
   lane = LaneType::UNSPECIFIED;
 }
 
-void Vehicle::update_position(const double s, const double d){
+void Vehicle::update_position(const double s, const double d) {
   this->s = s;
   this->d = d;
   this->lane = this->convert_d_to_lane(this->d);
 }
 
-void Vehicle::update_speed(const double v){
-  this->v = v;
-}
+void Vehicle::update_speed(const double v) { this->v = v; }
 
-void Vehicle::update_save_states(const State& state_s, const State& state_d){
+void Vehicle::update_save_states(const State &state_s, const State &state_d) {
   this->saved_state_s = state_s;
   this->saved_state_d = state_d;
   this->saved_state_s.p = fmod(this->saved_state_s.p, cfg_.trackLength());
 }
 
-void Vehicle::specify_adjacent_lanes(){
+void Vehicle::specify_adjacent_lanes() {
 
   if (this->lane == LaneType::LEFT) {
 
@@ -45,7 +43,7 @@ void Vehicle::specify_adjacent_lanes(){
   }
 }
 
-LaneType Vehicle::convert_d_to_lane(const double d){
+LaneType Vehicle::convert_d_to_lane(const double d) {
 
   LaneType lane = LaneType::NONE;
 
@@ -59,11 +57,11 @@ LaneType Vehicle::convert_d_to_lane(const double d){
   return lane;
 }
 
-LaneType Vehicle::convert_d_to_lane(){
+LaneType Vehicle::convert_d_to_lane() {
   return this->convert_d_to_lane(this->d);
 }
 
-double Vehicle::convert_lane_to_d(const LaneType l){
+double Vehicle::convert_lane_to_d(const LaneType l) {
 
   double d = MID_d;
 
@@ -77,11 +75,11 @@ double Vehicle::convert_lane_to_d(const LaneType l){
   return d;
 }
 
-double Vehicle::convert_lane_to_d(){
+double Vehicle::convert_lane_to_d() {
   return this->convert_lane_to_d(this->lane);
 }
 
-double Vehicle::get_target_d(const BehaviorType b){
+double Vehicle::get_target_d(const BehaviorType b) {
 
   if (b == BehaviorType::KEEPLANE) {
     return this->convert_lane_to_d(this->lane);
@@ -96,8 +94,7 @@ double Vehicle::get_target_d(const BehaviorType b){
   return this->convert_lane_to_d(this->lane);
 }
 
-
-TrajectoryXY Vehicle::startEngine(Map& map) {
+TrajectoryXY Vehicle::startEngine(Map &map) {
 
   const int n = 225;
   const double t = n * cfg_.timeIncrement();
@@ -121,7 +118,4 @@ TrajectoryXY Vehicle::startEngine(Map& map) {
   return new_traj;
 }
 
-
-double Vehicle::getTargetSpeed() {
-    return 0.0;
-}
+double Vehicle::getTargetSpeed() { return 0.0; }
