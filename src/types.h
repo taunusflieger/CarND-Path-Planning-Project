@@ -41,7 +41,7 @@ struct State {
   double a;
 };
 
-enum class LaneType { LEFT, MID, RIGHT, NONE, UNSPECIFIED };
+enum class LaneType : int { LEFT=0, MID=1, RIGHT=2, NONE=98, UNSPECIFIED=99 };
 
 enum class BehaviorType { KEEPLANE, TURNRIGHT, TURNLEFT };
 

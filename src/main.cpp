@@ -1,3 +1,4 @@
+// clang-format off
 #include <sys/time.h>
 #include <fstream>
 #include <math.h>
@@ -16,7 +17,9 @@
 #include "vehicle.h"
 #include "types.h"
 #include "trajectory.h"
-
+#include "prediction.h"
+#include "behavior.h"
+// clang-format on
 
 using namespace std;
 
@@ -117,10 +120,14 @@ int main(int argc, char **argv) {
           // Sensor Fusion
           /////////////////////////////////////////
 
-          // Sensor Fusion Data, a list of all other cars on the same side of
-          // the road.
-          vector<vector<double>> sensor_fusion = j[1]["sensor_fusion"];
-
+          // A 2d vector of cars and then that car's [car's unique ID, 
+          // car's x position in map coordinates, car's y position in map 
+          // coordinates, car's x velocity in m/s, car's y velocity in m/s, 
+          // car's s position in frenet coordinates, car's d position 
+          // in frenet coordinates. 
+          vector<vector<double>> raw_sensor_fusion = j[1]["sensor_fusion"];
+ 
+          
           /*
            if (cfg.dbgMain() == 1) {
             
@@ -152,9 +159,7 @@ int main(int argc, char **argv) {
           // Trajectory
           /////////////////////////////////////////
 
-          /////////////////////////////////////////
-          // Prediction
-          /////////////////////////////////////////
+          
 
           /////////////////////////////////////////
           // Behavior Planning
@@ -177,17 +182,20 @@ int main(int argc, char **argv) {
             // Make a list of all relevant information about other cars
             vector<Vehicle> otherCars;
 
-            for (int i = 0; i < sensor_fusion.size(); i++) {
-              int id = sensor_fusion[i][0];
-              double s = sensor_fusion[i][5];
-              double d = sensor_fusion[i][6];
-              double vx = sensor_fusion[i][3];
-              double vy = sensor_fusion[i][4];
+            for (int i = 0; i < raw_sensor_fusion.size(); i++) {
+              SensorFusionData sf;
+              
+              int id = raw_sensor_fusion[i][0];
+              double s = raw_sensor_fusion[i][5];
+              double d = raw_sensor_fusion[i][6];
+              double vx = raw_sensor_fusion[i][3];
+              double vy = raw_sensor_fusion[i][4];
 
               Vehicle car(id, cfg);
               car.update_position(s, d);
               car.update_speed(sqrt(vx * vx + vy * vy));
               otherCars.emplace_back(car);
+              
             }
 
             // Print for debugging
@@ -204,6 +212,13 @@ int main(int argc, char **argv) {
             cout << endl;
 
             cout << "---------------------------------" << endl;
+
+            /////////////////////////////////////////
+            // Prediction
+            /////////////////////////////////////////
+            Prediction predictions(otherCars, egoCar, cfg.planAhead(), cfg);
+
+            Behavior behavior(otherCars, egoCar, predictions, cfg);
 
             Trajectory trajectory(egoCar, BehaviorType::KEEPLANE, map, cfg);
 
@@ -232,6 +247,8 @@ int main(int argc, char **argv) {
             NextXY_points = traj_xy.pts;
             NextXY_points.n = traj_xy.pts.n;
 
+            prev_path_xy.pts.xs.erase(prev_path_xy.pts.xs.begin(), prev_path_xy.pts.xs.begin());
+            prev_path_xy.pts.ys.erase(prev_path_xy.pts.ys.begin(), prev_path_xy.pts.ys.begin());
             // Append these generated points to the old points
             prev_path_xy.pts.xs.insert(prev_path_xy.pts.xs.end(),
                                        NextXY_points.xs.begin(),

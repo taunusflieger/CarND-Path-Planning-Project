@@ -23,5 +23,9 @@
         "trajectory-length" : 120.0,
         "trajectory-min" : 50.0,
         "reuse-n-points" : 40
+    },
+    "car" : {
+        "safetyLength" : 5.0,
+        "safetyWidth" : 2.0
     }
 }

@@ -53,6 +53,14 @@ double Config::trajectoryReuseNPoints() {
   return j["trajectory"]["reuse-n-points"];
 }
 
+double Config::carSafetyLength() {
+  return j["car"]["safetyLength"];
+}
+
+double Config::carSafetyWidth() {
+  return j["car"]["safetyWidth"];
+}
+
 double Config::speedIncrease() { return j["speedIncrease"]; }
 
 double Config::speedTolerance() { return j["speedTolerance"]; }

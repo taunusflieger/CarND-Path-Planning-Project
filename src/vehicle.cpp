@@ -43,7 +43,7 @@ void Vehicle::specify_adjacent_lanes() {
   }
 }
 
-LaneType Vehicle::convert_d_to_lane(const double d) {
+LaneType Vehicle::convert_d_to_lane(const double d) const {
 
   LaneType lane = LaneType::NONE;
 
@@ -53,12 +53,13 @@ LaneType Vehicle::convert_d_to_lane(const double d) {
     lane = LaneType::MID;
   } else if (d > 8.0 && d < 12.0) {
     lane = LaneType::RIGHT;
-  }
+  } else
+    lane = LaneType::UNSPECIFIED;
   return lane;
 }
 
-LaneType Vehicle::convert_d_to_lane() {
-  return this->convert_d_to_lane(this->d);
+LaneType Vehicle::convert_d_to_lane() const {
+  return convert_d_to_lane(d);
 }
 
 double Vehicle::convert_lane_to_d(const LaneType l) {

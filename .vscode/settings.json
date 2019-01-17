@@ -13,7 +13,8 @@
         "algorithm": "cpp",
         "vector": "cpp",
         "iosfwd": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "core": "cpp"
     },
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 10000,
@@ -22,7 +23,7 @@
     "breadcrumbs.enabled": true,
     "git.allowForcePush": true,
     "editor.tabSize": 2,
-    "C_Cpp.clang_format_fallbackStyle": "{BasedOnStyle: Google, IndentWidth: 2}",
+    "C_Cpp.clang_format_fallbackStyle": "{BasedOnStyle: Google, ColumnLimit: 0, IndentWidth: 2}",
     "editor.formatOnType": true,
     "clang-format.executable": "/usr/local/Cellar/clang-format/2018-12-18/bin/clang-format"
 }

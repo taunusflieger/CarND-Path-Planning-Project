@@ -41,5 +41,9 @@ public:
   double speedTolerance();
   double collisionBuffer();
 
+  // Bounding box for SAT based collision check
+  double carSafetyLength();
+  double carSafetyWidth();
+
   double initialS();
 };

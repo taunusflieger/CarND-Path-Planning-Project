@@ -7,3 +7,7 @@
 // =================================================================
 #include "behavior.h"
 
+Behavior::Behavior(std::vector<Vehicle>&  otherCars, Vehicle& egoCar,
+             Prediction& predictions, Config& cfg) : egoCar_(egoCar), cfg_(cfg) {
+
+}

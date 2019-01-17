@@ -15,7 +15,7 @@ add_definitions(-std=c++11)
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-set(sources src/main.cpp src/config.cpp src/map.cpp src/vehicle.cpp src/jmt.cpp src/trajectory.cpp src/behavior.cpp src/prediction.cpp)
+set(sources src/main.cpp src/config.cpp src/map.cpp src/vehicle.cpp src/jmt.cpp src/trajectory.cpp src/behavior.cpp src/prediction.cpp src/cost.cpp)
 
 
 

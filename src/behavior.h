@@ -1,6 +1,8 @@
 #pragma once
 
 #include "types.h"
+#include "prediction.h"
+
 
 struct Target {
   double velocity;
@@ -14,5 +16,10 @@ struct Target {
 
 class Behavior {
 public:
-  Behavior(){};
+  Behavior(std::vector<Vehicle>&  otherCars, Vehicle& egoCar,
+             Prediction& predictions, Config& cfg);
+
+private:
+  Config& cfg_;
+  Vehicle& egoCar_;  
 };
