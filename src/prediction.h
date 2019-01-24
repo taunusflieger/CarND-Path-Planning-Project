@@ -10,9 +10,10 @@ class Prediction {
 public:
   Prediction(std::vector<Vehicle>  &otherCars, Vehicle  &egoCar,
              int planning_horizon, Config  &cfg);
-
+  std::vector<int> getNearbyCars(std::vector<Vehicle>  &otherCars);
 private:
-  std::vector<int> getNearbyCars(std::vector<Vehicle> const &otherCars);
+  Config& cfg_;
+  Vehicle& egoCar_;
 
   // For each lane we store the index of the
   // car each is near by. If there is no car in range
@@ -21,11 +22,9 @@ private:
   std::vector<int> nearby_back_ = {-1, -1, -1};
   
   
-
-  Config& cfg_;
-  Vehicle& egoCar_;
   double dist_front_;
   double vel_front_;
   double time_to_collision_; // vs front vehicle
   double time_to_stop_;      // time from vel_ego_ to 0
+
 };

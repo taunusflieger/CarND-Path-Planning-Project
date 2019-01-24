@@ -64,4 +64,5 @@ class Map {
   XYPoints makePath(JMT jmt_s, JMT jmt_d, const double t, const int n);
   vector<double> getFrenet(double x, double y, double theta);
   void plot(void);
+  double deg2rad(double x) { return x * M_PI / 180; };
 };

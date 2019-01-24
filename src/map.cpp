@@ -16,7 +16,7 @@ inline double deg2rad(double x) { return x * M_PI / 180; }
 inline double rad2deg(double x) { return x * 180 / M_PI; }
 
 void Map::LoadData(string &filename) {
-  ifstream in_map_(filename.c_str(), ifstream::in);
+  ifstream in_map(filename.c_str(), ifstream::in);
 
   string line;
 
@@ -25,7 +25,7 @@ void Map::LoadData(string &filename) {
   double max_dist = 0, min_dist = MAXFLOAT;
   double total_dist = 0;
   int line_cnt = 0;
-  while (getline(in_map_, line)) {
+  while (getline(in_map, line)) {
     istringstream iss(line);
     double x, y;
     float s, d_x, d_y;
@@ -52,6 +52,7 @@ void Map::LoadData(string &filename) {
     prev_y = y;
     line_cnt++;
   }
+  in_map.close();
   assert(map_waypoints_x_.size() &&
          "map not loaded, probably path include is missing");
 
@@ -347,7 +348,6 @@ vector<double> Map::getXYspline(double s, double d) {
   s = fmod(s, cfg_.trackLength());
   double x = spline_x_(s) + d * spline_dx_(s);
   double y = spline_y_(s) + d * spline_dy_(s);
-
   return {x, y};
 }
 

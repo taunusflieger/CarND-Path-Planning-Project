@@ -1,7 +1,16 @@
 #include "vehicle.h"
 
-Vehicle::Vehicle(const int i, Config &cfg) : id(i), cfg_(cfg) {
+Vehicle::Vehicle(SensorFusionData& sf, Config &cfg) : cfg_(cfg) {
   lane = LaneType::UNSPECIFIED;
+
+  id = sf.id;
+  x = sf.x;
+  y = sf.y;
+  s = sf.s;
+  d = sf.d;
+  vx = sf.vx;
+  vy = sf.vy;
+  v = sqrt(vx * vx + vy * vy);
 }
 
 void Vehicle::update_position(const double s, const double d) {
@@ -10,7 +19,7 @@ void Vehicle::update_position(const double s, const double d) {
   this->lane = this->convert_d_to_lane(this->d);
 }
 
-void Vehicle::update_speed(const double v) { this->v = v; }
+void Vehicle::update_speed(const double V) { v = V; }
 
 void Vehicle::update_save_states(const State &state_s, const State &state_d) {
   this->saved_state_s = state_s;

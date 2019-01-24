@@ -24,6 +24,7 @@ public:
   double trackLength();
   int numLanes();
   int pathSizeCutOff();
+  int prevPathReuse();
   double sensorRangeFront();
   double sensorRangeBack();
   double targetSpeed();
@@ -36,7 +37,9 @@ public:
   double trajectoryTrajectoryMin();
   double trajectoryReuseNPoints();
   double traverseTime();
-
+  
+  double acceleration();
+  double accelerationLimit();
   double speedIncrease();
   double speedTolerance();
   double collisionBuffer();

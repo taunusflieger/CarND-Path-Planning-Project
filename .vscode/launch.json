@@ -8,7 +8,7 @@
             "name": "(lldb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/path_planning",
+            "program": "/tmp/build/PathPlanning/path_planning",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

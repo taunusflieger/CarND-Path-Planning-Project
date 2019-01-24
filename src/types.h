@@ -29,6 +29,10 @@ struct SensorFusionData {
   double vy;
   double s;
   double d;
+
+  SensorFusionData(int id, double x, double y, double vx, double vy, double s,
+                   double d)
+      : id(id), x(x), y(y), vx(vx), vy(vy), s(s), d(d) {}
 };
 
 /* State - stores three doubles p, v, a
@@ -41,7 +45,13 @@ struct State {
   double a;
 };
 
-enum class LaneType : int { LEFT=0, MID=1, RIGHT=2, NONE=98, UNSPECIFIED=99 };
+enum class LaneType : int {
+  LEFT = 0,
+  MID = 1,
+  RIGHT = 2,
+  NONE = 98,
+  UNSPECIFIED = 99
+};
 
 enum class BehaviorType { KEEPLANE, TURNRIGHT, TURNLEFT };
 
@@ -93,6 +103,21 @@ struct TrajectoryJMT {
 struct PreviousPath {
   TrajectoryXY xy;
   TrajectorySD sd;
-  PreviousPath(TrajectoryXY XY = {}, TrajectorySD SD = {}, int N = 0)
-      : xy(XY), sd(SD){};
+  int num_xy_reused;
+  PreviousPath(TrajectoryXY xy = {}, TrajectorySD sd = {}, int n = 0)
+      : xy(xy), sd(sd), num_xy_reused(n) {};
+};
+
+// Defines the target position of the car at a specific time in the future.
+// This is used during behavior planning and trajectory generation
+struct Target {
+  double velocity;
+  double acceleration;
+  double s;
+  // Calculated time to reach the target position
+  double time;
+  LaneType lane;
+
+  Target(LaneType l = LaneType::UNSPECIFIED, double v = 0, double acceleration = 0, double s = 0, double t = 0)
+      : lane(l), velocity(v), acceleration(acceleration), s(s), time(t) {}
 };

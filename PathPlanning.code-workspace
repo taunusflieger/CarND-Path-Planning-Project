@@ -1,0 +1,33 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"iterator": "cpp",
+			"__config": "cpp",
+			"__nullptr": "cpp",
+			"cstddef": "cpp",
+			"exception": "cpp",
+			"initializer_list": "cpp",
+			"new": "cpp",
+			"stdexcept": "cpp",
+			"type_traits": "cpp",
+			"typeinfo": "cpp",
+			"algorithm": "cpp",
+			"vector": "cpp",
+			"iosfwd": "cpp",
+			"functional": "cpp",
+			"core": "cpp",
+			"ostream": "cpp"
+		},
+		"files.autoSave": "afterDelay",
+		"files.autoSaveDelay": 10000,
+		"explorer.openEditors.visible": 10,
+		"debug.inlineValues": true,
+		"breadcrumbs.enabled": true,
+		"git.allowForcePush": true
+	}
+}

@@ -19,9 +19,12 @@
 #include "trajectory.h"
 #include "prediction.h"
 #include "behavior.h"
+#include "log.h"
 // clang-format on
 
 using namespace std;
+
+Logger log_("/tmp/path_planning_mz.log");
 
 string hasData(string s);
 
@@ -39,6 +42,7 @@ int main(int argc, char **argv) {
   Config cfg;
 
   Map map(cfg);
+  TrajectorySD prev_path_sd;
 
   cfg.Load("config.json");
   cout << cfg.numLanes() << endl;
@@ -52,7 +56,7 @@ int main(int argc, char **argv) {
 
   // map.plot();
 
-  h.onMessage([&cfg, &map, &just_starting](uWS::WebSocket<uWS::SERVER> ws,
+  h.onMessage([&cfg, &map, &just_starting, &prev_path_sd](uWS::WebSocket<uWS::SERVER> ws,
                                            char *data, size_t length,
                                            uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -65,7 +69,7 @@ int main(int argc, char **argv) {
     // keep track of previous s and d paths: to initialize for continuity the
     // new trajectory we do the same for x,y path, but for this we get the
     // prev_path from the simulator
-    static TrajectorySD prev_path_sd;
+   
 
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
       struct timespec tstart = {0, 0}, tend = {0, 0};
@@ -92,65 +96,38 @@ int main(int argc, char **argv) {
         if (event == "telemetry") {
           // j[1] is the data JSON object
 
-          // Main car's localization Data
-          CarLocalizationData vLocal(j[1]["x"], j[1]["y"], j[1]["s"], j[1]["d"],
-                                     j[1]["yaw"], j[1]["speed"]);
+          // Ego car's localization Data
+          Vehicle egoCar(100, cfg);
+          egoCar.update_position(j[1]["s"], j[1]["d"]);
+          egoCar.updatePositionXY(j[1]["x"], j[1]["y"]);
+          egoCar.updateYaw(j[1]["yaw"]);
+          egoCar.update_speed(j[1]["speed"]);
+          egoCar.specify_adjacent_lanes();
+          
 
-          // Ergo car's localization Data
-          double car_x = j[1]["x"];
-          double car_y = j[1]["y"];
-
-          double car_s = j[1]["s"];
-          double car_d = j[1]["d"];
-          double car_speed = j[1]["speed"];
+          cout << "SPEEDOMETER: car.speed=" << egoCar.v << endl;
 
           // Previous path data given to the Planner
           auto previous_path_x = j[1]["previous_path_x"];
           auto previous_path_y = j[1]["previous_path_y"];
-          // Previous path's end s and d values
-          double end_path_s = j[1]["end_path_s"];
-          double end_path_d = j[1]["end_path_d"];
 
           // Our default is to just give back our previous plan
           int n = previous_path_x.size();
-          // XYPoints XY_points = {previous_path_x, previous_path_y, n};
           TrajectoryXY prev_path_xy(previous_path_x, previous_path_y);
 
           /////////////////////////////////////////
           // Sensor Fusion
           /////////////////////////////////////////
 
-          // A 2d vector of cars and then that car's [car's unique ID, 
-          // car's x position in map coordinates, car's y position in map 
-          // coordinates, car's x velocity in m/s, car's y velocity in m/s, 
-          // car's s position in frenet coordinates, car's d position 
-          // in frenet coordinates. 
+          // A 2d vector of cars and then that car's [car's unique ID,
+          // car's x position in map coordinates, car's y position in map
+          // coordinates, car's x velocity in m/s, car's y velocity in m/s,
+          // car's s position in frenet coordinates, car's d position
+          // in frenet coordinates.
           vector<vector<double>> raw_sensor_fusion = j[1]["sensor_fusion"];
- 
-          
-          /*
-           if (cfg.dbgMain() == 1) {
-            
 
-
-             std::cout << "t: " << t_msg << ", dt: " << dt << "ms, x: " <<
-           vLocal.x
-                       << ", y: " << vLocal.y << ", s: " << vLocal.s << ", v:"
-           << vLocal.speed << std::endl;
-            
-
-
-           } */
           t_oldmsg = t_msg;
 
-          Vehicle egoCar(100, cfg);
-          egoCar.update_position(car_s, car_d);
-          egoCar.updatePositionXY(car_x, car_y);
-          egoCar.update_speed(car_speed);
-          egoCar.specify_adjacent_lanes();
-          egoCar.front_gap = 10000; // TODO: REMOVE !!!!!
-          // if (call_cnt > 3)
-          // exit(-1);
           /////////////////////////////////////////
           // Localization
           /////////////////////////////////////////
@@ -159,107 +136,107 @@ int main(int argc, char **argv) {
           // Trajectory
           /////////////////////////////////////////
 
-          
-
           /////////////////////////////////////////
           // Behavior Planning
           /////////////////////////////////////////
 
-          if (just_starting) {
-            // Our car hasn't moved yet. Let's move it!
-            cout << "Starting engine..." << endl;
-            prev_path_xy = egoCar.startEngine(map);
-            just_starting = false;
-            cout << "Engine started..." << endl;
 
-            Trajectory trajectory(cfg, map);
-            TrajectoryJMT prev_traj =
-                trajectory.generateColdStartPrevPath(egoCar.s, egoCar.d);
-            prev_path_sd = prev_traj.path_sd;
+          // Our previous plan is about to run out, so append to it
+          // Make a list of all relevant information about other cars
+          vector<Vehicle> otherCars;
 
-          } else if (n < cfg.pathSizeCutOff()) {
-            // Our previous plan is about to run out, so append to it
-            // Make a list of all relevant information about other cars
-            vector<Vehicle> otherCars;
+          for (int i = 0; i < raw_sensor_fusion.size(); i++) {
+            // sensor fusion data structure:
+            // car's unique ID, car's x position in map coordinates, car's y
+            // position in map coordinates, car's x velocity in m/s, car's y
+            // velocity in m/s, car's s position in frenet coordinates, car's
+            // d position in frenet coordinates.
+            SensorFusionData sf(
+                raw_sensor_fusion[i][0], raw_sensor_fusion[i][1],
+                raw_sensor_fusion[i][2], raw_sensor_fusion[i][3],
+                raw_sensor_fusion[i][4]*2.2369362920544, raw_sensor_fusion[i][5],
+                raw_sensor_fusion[i][6]);
 
-            for (int i = 0; i < raw_sensor_fusion.size(); i++) {
-              SensorFusionData sf;
-              
-              int id = raw_sensor_fusion[i][0];
-              double s = raw_sensor_fusion[i][5];
-              double d = raw_sensor_fusion[i][6];
-              double vx = raw_sensor_fusion[i][3];
-              double vy = raw_sensor_fusion[i][4];
-
-              Vehicle car(id, cfg);
-              car.update_position(s, d);
-              car.update_speed(sqrt(vx * vx + vy * vy));
-              otherCars.emplace_back(car);
-              
-            }
-
-            // Print for debugging
-            cout << "---------------------------------" << endl;
-            cout << "STATE: s, d --- x, y --- v:" << endl;
-            cout << car_s << " , " << car_d << " --- " << car_x << " , "
-                 << car_y << " --- " << car_speed << ":" << endl;
-
-            cout << "---------------------------------" << endl;
-            cout << "our left:  our lane:   our right:" << endl;
-            // print_lane(myCar.lane_at_left);
-            // print_lane(myCar.lane);
-            // print_lane(myCar.lane_at_right);
-            cout << endl;
-
-            cout << "---------------------------------" << endl;
-
-            /////////////////////////////////////////
-            // Prediction
-            /////////////////////////////////////////
-            Prediction predictions(otherCars, egoCar, cfg.planAhead(), cfg);
-
-            Behavior behavior(otherCars, egoCar, predictions, cfg);
-
-            Trajectory trajectory(egoCar, BehaviorType::KEEPLANE, map, cfg);
-
-            // Update saved state of our car (THIS IS IMPORTANT) with the latest
-            // generated target states, this is to be used as the starting state
-            // when generating a trajectory next time
-            // egoCar.update_save_states(trajectory.targetState_s,
-            // trajectory.targetState_d);
-
-            // convert this trajectory in the s-d frame to to discrete XY points
-            // the simulator can understand
-            // int num_points = cfg.traverseTime()/cfg.timeIncrement();
-            // XYPoints NextXY_points = map.makePath(
-            //  trajectory.get_jmt_s(), trajectory.get_jmt_d(),
-            //  cfg.timeIncrement(), num_points);
-
-            // TrajectoryXY traj_xy =
-            // trajectory.generateSplineBasedTrajectory(egoCar, XY_points);
-            int num_points = cfg.traverseTime() /
-                             cfg.timeIncrement(); // TODO: decide if we use this
-                                                  // or the number of points
-                                                  // defined in the cfg file
-            TrajectoryXY traj_xy = trajectory.generateTrajectory(
-                egoCar, BehaviorType::KEEPLANE, prev_path_xy, num_points);
-            XYPoints NextXY_points;
-            NextXY_points = traj_xy.pts;
-            NextXY_points.n = traj_xy.pts.n;
-
-            prev_path_xy.pts.xs.erase(prev_path_xy.pts.xs.begin(), prev_path_xy.pts.xs.begin());
-            prev_path_xy.pts.ys.erase(prev_path_xy.pts.ys.begin(), prev_path_xy.pts.ys.begin());
-            // Append these generated points to the old points
-            prev_path_xy.pts.xs.insert(prev_path_xy.pts.xs.end(),
-                                       NextXY_points.xs.begin(),
-                                       NextXY_points.xs.end());
-
-            prev_path_xy.pts.ys.insert(prev_path_xy.pts.ys.end(),
-                                       NextXY_points.ys.begin(),
-                                       NextXY_points.ys.end());
-
-            prev_path_xy.pts.n = prev_path_xy.pts.xs.size();
+            Vehicle car(sf, cfg);
+            otherCars.emplace_back(car);
           }
+
+          int prev_size = prev_path_xy.pts.xs.size();
+          log_.of_ << "prev_size=" << prev_size << " car.x=" << egoCar.x << " car.y=" << egoCar.y << " car.s=" << 
+                  egoCar.s << " car.d=" << egoCar.d << " car.speed=" << egoCar.v  << endl;
+
+          vector<double> frenet_car = map.getFrenet(egoCar.x, egoCar.y, map.deg2rad(egoCar.yaw));
+          egoCar.s = frenet_car[0];
+          egoCar.d = frenet_car[1];
+
+          if (just_starting) {
+            Trajectory trajectory(cfg, map);
+            TrajectoryJMT traj_jmt = trajectory.JMT_init(egoCar.s, egoCar.d);
+/* 
+            log_.write("**** Initial trajectory *****");
+            for (int i = 0; i < traj_jmt.path_sd.path_s.size(); i++)
+              log_.of_ << "s = " << traj_jmt.path_sd.path_s[i].v << "\td = " << traj_jmt.path_sd.path_d[i].v << endl;
+            log_.write("***** Initial trajectory - created *****");
+          */   
+            prev_path_sd = traj_jmt.path_sd;
+            just_starting = false;
+          }
+
+          /////////////////////////////////////////
+          // Prediction
+          /////////////////////////////////////////
+          // -- prev_size: close to 100 msec when possible -not lower bcz of simulator latency- for trajectory (re)generation ---
+          // points _before_ prev_size are kept from previous generated trajectory
+          // points _after_  prev_size will be re-generated
+          PreviousPath previous_path = PreviousPath(prev_path_xy, prev_path_sd, min(prev_path_xy.pts.n, cfg.prevPathReuse()));
+          
+         /*  log_.write("***** Previous path  *****");
+          for (int i = 0; i < previous_path.sd.path_d.size(); i++) {
+            log_.of_ << "s = " << previous_path.sd.path_s[i].v << "\td = " << previous_path.sd.path_d[i].v;
+            if (i < previous_path.xy.pts.xs.size()) 
+              log_.of_ << "\tx = " << previous_path.xy.pts.xs[i] << "\ty = " << previous_path.xy.pts.ys[i] << endl;
+            else
+              log_.of_ << endl;
+           }
+           log_.write("***** *************  *****");
+ */
+           Prediction predictions(otherCars, egoCar, cfg.planAhead(), cfg);
+
+           Behavior behavior(otherCars, egoCar, predictions, previous_path, map, cfg);
+
+           // Trajectory trajectory(egoCar, BehaviorType::KEEPLANE, map, cfg);
+
+           // Update saved state of our car (THIS IS IMPORTANT) with the latest
+           // generated target states, this is to be used as the starting state
+           // when generating a trajectory next time
+           // egoCar.update_save_states(trajectory.targetState_s,
+           // trajectory.targetState_d);
+
+           // convert this trajectory in the s-d frame to to discrete XY points
+           // the simulator can understand
+           TrajectoryJMT traj = behavior.getPlanningResult();
+           TrajectoryXY traj_xy = traj.trajectory;
+           prev_path_sd = traj.path_sd;
+
+           if (traj_xy.pts.xs.size() > 0) {
+             XYPoints NextXY_points;
+             NextXY_points = traj_xy.pts;
+             NextXY_points.n = traj_xy.pts.n;
+
+             //for (int i = 0; i < NextXY_points.n; i++)
+             //    cout << "x = " << NextXY_points.xs[i] << "\ty = " << NextXY_points.ys[i] << endl;
+/* 
+            log_.write("***** New path  *****");
+            for (int i = 0; i < NextXY_points.xs.size(); i++) {
+                log_.of_ << "\tx = " << NextXY_points.xs[i]  << "\ty = " << NextXY_points.ys[i] << endl;
+            }
+            log_.write("***** *************  *****");
+ */
+             prev_path_xy.pts.xs = NextXY_points.xs;
+             prev_path_xy.pts.ys = NextXY_points.ys;
+             prev_path_xy.pts.n = prev_path_xy.pts.xs.size();
+          }
+        
 
           //*********************************
           //* Send updated path plan to simulator

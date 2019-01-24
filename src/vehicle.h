@@ -18,6 +18,8 @@ public:
   double s;
   double d;
   double v;
+  double vx;
+  double vy;
   double yaw;
   double front_gap;
   double front_v;
@@ -30,7 +32,8 @@ public:
   LaneType lane_at_right;
   LaneType lane_at_left;
 
-  Vehicle(const int i, Config &cfg);
+  Vehicle(SensorFusionData& sf, Config &cfg);
+  Vehicle(int id, Config &cfg) : id(id), cfg_(cfg){};
   void updatePositionXY(double X, double Y) {
     x = X;
     y = Y;
