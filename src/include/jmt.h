@@ -1,9 +1,9 @@
 #pragma once
 
 #include <iostream>
-#include "Eigen-3.3/Eigen/Core"
-#include "Eigen-3.3/Eigen/QR"
-#include "Eigen-3.3/Eigen/Dense"
+#include "../Eigen-3.3/Eigen/Core"
+#include "../Eigen-3.3/Eigen/QR"
+#include "../Eigen-3.3/Eigen/Dense"
 #include "types.h"
 
 class JMT {

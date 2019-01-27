@@ -23,6 +23,7 @@ set(sources src/main.cpp src/config.cpp src/map.cpp src/vehicle.cpp src/jmt.cpp 
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 
+include_directories(src/include)
 include_directories(/usr/local/include)
 include_directories(/usr/local/opt/openssl/include)
 link_directories(/usr/local/lib)

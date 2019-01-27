@@ -5,7 +5,7 @@
 //  these options and chooses the least cost option to define a
 //  new target for the egocar
 // =================================================================
-#include "behavior.h"
+#include <behavior.h>
 #include "log.h"
 #include "trajectory.h"
 
