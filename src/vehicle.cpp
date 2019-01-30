@@ -104,28 +104,4 @@ double Vehicle::get_target_d(const BehaviorType b) {
   return this->convert_lane_to_d(this->lane);
 }
 
-TrajectoryXY Vehicle::startEngine(Map &map) {
-
-  const int n = 225;
-  const double t = n * cfg_.timeIncrement();
-  const double target_speed = 20.0;
-  const double target_s = s + 40.0;
-
-  const State startState_s = {s, v, 0.0};
-  const State startState_d = {d, 0.0, 0.0};
-
-  const State endState_s = {target_s, target_speed, 0.0};
-  const State endState_d = {convert_lane_to_d(), 0.0, 0.0};
-
-  JMT jmt_s(startState_s, endState_s, t);
-  JMT jmt_d(startState_d, endState_d, t);
-
-  update_save_states(endState_s, endState_d);
-
-  XYPoints pts = map.makePath(jmt_s, jmt_d, cfg_.timeIncrement(), n);
-  TrajectoryXY new_traj(pts.xs, pts.ys);
-
-  return new_traj;
-}
-
 double Vehicle::getTargetSpeed() { return 0.0; }
