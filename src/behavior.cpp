@@ -5,9 +5,9 @@
 //  these options and chooses the least cost option to define a
 //  new target for the egocar
 // =================================================================
-#include <behavior.h>
 #include "log.h"
 #include "trajectory.h"
+#include <behavior.h>
 
 extern Logger log_;
 
@@ -52,6 +52,7 @@ void Behavior::PerformReady(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
 void Behavior::PerformLaneKeep(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
                                Prediction &predictions) {
   double acceleration = cfg_.acceleration();
+  bool prepLaneChange = false;
   ref_speed_ = cfg_.targetSpeed();
   currentTrigger_ = Triggers::NewPredictions;
   Target t;
@@ -60,30 +61,34 @@ void Behavior::PerformLaneKeep(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
       predictions.getNearbyCars(otherCars)[static_cast<int>(egoCar.lane) * 2];
 
   if (idx_carAhead >= 0) {
+    log_.of_ << "==== Behavior::PerformLaneKeep  car ahead ====" << endl;
     // We have a car in our lane in front of us
     front_gap_ = otherCars[idx_carAhead].front_gap;
     if (front_gap_ <= cfg_.collisionBuffer()) {
-      ref_speed_ = otherCars[idx_carAhead].v >= cfg_.targetSpeed() ? cfg_.targetSpeed() : otherCars[idx_carAhead].v - 2.0;
-      
+      ref_speed_ = otherCars[idx_carAhead].v >= cfg_.targetSpeed()
+                       ? cfg_.targetSpeed()
+                       : otherCars[idx_carAhead].v - 2.0;
     }
-    if (ref_speed_ <= egoCar.v)
-        acceleration = -cfg_.acceleration() / 3;
-      else
-        acceleration = cfg_.acceleration() / 3;
-    log_.of_ << "==== Behavior::PerformLaneKeep  car ahead ====" << endl;
-    log_.of_ << "Front car speed: " << ref_speed_ << "\tdist = " << front_gap_
+
+    if (ref_speed_ <= egoCar.v) {
+      prepLaneChange = true;
+      if (front_gap_ <= cfg_.collisionBuffer() / 2) {
+        // harder deceleration
+        acceleration = -cfg_.acceleration() / 2;
+      } else if (front_gap_ <= cfg_.collisionBuffer() / 3) {
+        // emergency break
+        acceleration = -cfg_.acceleration();
+      } else
+        acceleration = -cfg_.acceleration() / 4;
+      log_.of_ << "----- speed acceleration = " << acceleration << endl;
+    } else {
+      acceleration = cfg_.acceleration() / 4;
+      log_.of_ << "+++++ speed acceleration = " << acceleration << endl;
+    }
+
+    log_.of_ << "Front car speed: " << ref_speed_ << "\tdist = " << front_gap_ << "\ttarget Speed = " << cfg_.targetSpeed() 
              << endl;
   }
-  /*
-  // If the car in front is going fast or we are very far from it anyway, go as
-  // fast as we can Else let's go a notch slower than the car in front
-  bool safe = (car.front_v > SPEED_LIMIT) || (car.front_gap > FRONT_BUFFER);
-  double target_v = safe ? SPEED_LIMIT : (car.front_v - SPEED_BUFFER);
-
-  // But if the car in front is too slow, let's go a little faster
-  target_v = target_v > MIN_SPEED ? target_v : MIN_SPEED;
- */
-  // Calculate target
 
   t.velocity = ref_speed_;
   t.time = cfg_.traverseTime();
@@ -96,9 +101,15 @@ void Behavior::PerformLaneKeep(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
   resulting_trajectory_ =
       trajectory.generateSDTrajectory(egoCar, prev_path_, t);
 
-  /* resulting_trajectory_xy_ = trajectory.generateTrajectory(
-      egoCar, BehaviorType::KEEPLANE, prev_path_xy_, t);
- */
+  // Check if we need to prepare a lane change
+  if (prepLaneChange) {
+    // Find lanes which are free
+
+    // generate trajectories
+
+    // 
+
+  }
 };
 
 void Behavior::PerformLaneChangeLeft(std::vector<Vehicle> &otherCars,

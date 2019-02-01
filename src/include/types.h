@@ -29,6 +29,7 @@ struct SensorFusionData {
   double vy;
   double s;
   double d;
+  double v;
 
   SensorFusionData(int id, double x, double y, double vx, double vy, double s,
                    double d)

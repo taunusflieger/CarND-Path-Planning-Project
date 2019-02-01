@@ -6,11 +6,21 @@
 using json = nlohmann::json;
 
 bool Config::Load(string filename) {
-  std::ifstream ifs(filename);
+  std::ifstream ifs;
 
-  j = json::parse(ifs);
-  loaded = true;
-  return true;
+  ifs.exceptions(ifstream::badbit);
+
+  try {
+    ifs.open(filename);
+    j = json::parse(ifs);
+    ifs.close();
+    loaded = true;
+
+  } catch (const ifstream::failure& e) {
+    cout << "Exception during reading config.json" << endl;
+  }
+
+  return loaded;
 }
 
 int Config::dbgMain() { return j["dbgMain"]; }

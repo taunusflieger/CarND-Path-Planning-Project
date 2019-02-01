@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
           egoCar.update_position(j[1]["s"], j[1]["d"]);
           egoCar.updatePositionXY(j[1]["x"], j[1]["y"]);
           egoCar.updateYaw(j[1]["yaw"]);
-          egoCar.update_speed(j[1]["speed"]);
+          egoCar.update_speed(((double)j[1]["speed"]) / 2.237); // mph => m/s
           egoCar.specify_adjacent_lanes();
           
 
@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
             SensorFusionData sf(
                 raw_sensor_fusion[i][0], raw_sensor_fusion[i][1],
                 raw_sensor_fusion[i][2], raw_sensor_fusion[i][3],
-                raw_sensor_fusion[i][4]*2.2369362920544, raw_sensor_fusion[i][5],
+                raw_sensor_fusion[i][4], raw_sensor_fusion[i][5],
                 raw_sensor_fusion[i][6]);
 
             Vehicle car(sf, cfg);

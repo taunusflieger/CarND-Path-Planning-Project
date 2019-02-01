@@ -310,18 +310,24 @@ TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,
     d = car.d, d_dot = 0, d_ddot = 0;
   }
 
-  s_ddot = target.acceleration;  // TODO: check if we need s_ddot at all
+  s_ddot = target.acceleration;  
 
   double prev_s_dot = s_dot;
-  // log_.write("***** generate_trajectory_sd  *****");
+  //log_.write("***** generate_trajectory_sd  *****");
   for (int i = prev_size; i < cfg_.planAhead(); i++) {
     // increase/decrease speed till target velocity is reached
     s_dot += s_ddot * cfg_.timeIncrement();
-    if ((target.acceleration > 0 && prev_s_dot <= target_velocity_ms && s_dot > target_velocity_ms) ||
-        (target.acceleration < 0 && prev_s_dot >= target_velocity_ms && s_dot < target_velocity_ms)) {
-      s_dot = target_velocity_ms;
+
+    if (s_ddot > 0) { // acceleration
+      // cap at target speed if we are accelerating
+      s_dot = max(min(s_dot, target.velocity), 0.0);
     }
-    s_dot = max(min(s_dot, target.velocity), 0.0);
+    else
+    {
+      // cap at 0 if we are decelerate 
+      s_dot = max(s_dot, 0.0); 
+    }
+
     s += s_dot * cfg_.timeIncrement();
 
     prev_s_dot = s_dot;
@@ -333,12 +339,13 @@ TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,
     vector<double> point_xy = map_.getXYspline(s, d);
     double x = point_xy[0];
     double y = point_xy[1];
-    // log_.of_ << "s = " << s  << "\ts_dot = " << s_dot << "\ts_ddot = " << s_ddot << "\td = " << d << "\tx = " << x << "\ty = " << y << endl;
+    //if (s_ddot < 0)
+    //  log_.of_ << "s = " << s  << "\ts_dot = " << s_dot << "\ts_ddot = " << s_ddot << "\td = " << d << "\tx = " << x << "\ty = " << y << endl;
     next_x_vals.push_back(point_xy[0]);
     next_y_vals.push_back(point_xy[1]);
     
   }
-  // log_.write("***** ======== *****");
+  //log_.write("***** ======== *****");
   traj_jmt.trajectory = TrajectoryXY(next_x_vals, next_y_vals);
   traj_jmt.path_sd = TrajectorySD(new_path_s, new_path_d);
 
