@@ -8,7 +8,7 @@
 
 class Behavior {
 public:
-  enum States {
+  enum class States : int {
     Ready = 0,
     LaneKeep = 1,
     LaneChangeLeft = 2,
@@ -16,7 +16,7 @@ public:
     PrepareLaneChange = 4
 
   };
-  enum Triggers {
+  enum class Triggers {
     None,
     Initialize,
     SlowCarAhead,

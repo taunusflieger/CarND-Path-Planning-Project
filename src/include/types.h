@@ -101,13 +101,6 @@ struct TrajectoryJMT {
   TrajectorySD path_sd;
 };
 
-struct PreviousPath {
-  TrajectoryXY xy;
-  TrajectorySD sd;
-  int num_xy_reused;
-  PreviousPath(TrajectoryXY xy = {}, TrajectorySD sd = {}, int n = 0)
-      : xy(xy), sd(sd), num_xy_reused(n) {};
-};
 
 // Defines the target position of the car at a specific time in the future.
 // This is used during behavior planning and trajectory generation
@@ -122,3 +115,18 @@ struct Target {
   Target(LaneType l = LaneType::UNSPECIFIED, double v = 0, double acceleration = 0, double s = 0, double t = 0)
       : lane(l), velocity(v), acceleration(acceleration), s(s), time(t) {}
 };
+
+struct TrajectoryCandidates {
+  Target t;
+  TrajectoryJMT jmt_traj;
+  double cost;
+};
+
+struct PreviousPath {
+  TrajectoryXY xy;
+  TrajectorySD sd;
+  int num_xy_reused;
+  PreviousPath(TrajectoryXY xy = {}, TrajectorySD sd = {}, int n = 0)
+      : xy(xy), sd(sd), num_xy_reused(n) {};
+};
+

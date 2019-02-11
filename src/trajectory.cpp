@@ -1,26 +1,28 @@
 #include "trajectory.h"
+
+#include "Eigen-3.3/Eigen/Dense"
 #include "log.h"
 
+using Eigen::MatrixXd;
+using Eigen::VectorXd;
+
 extern  Logger log_;
-// boundaries of acceptable speed of our vehicle
-const double HARD_SPEED_LIMIT = 22.352;  // 50mph in m/s
-const double SPEED_LIMIT = 22;
-const double MIN_SPEED = 15.0;
-
-// if the gap is less than this we consider it unsafe to turn
-const double FRONT_GAP_THRESH = 25.0;
-const double BACK_GAP_THRESH = 10.0;
-
-// This is the buffers we want against the leading front vehicle
-// for safety so we don't collide with the vehicle right in front of us
-const double FRONT_BUFFER = FRONT_GAP_THRESH + 10.0;
-const double DISTANCE_BUFFER = 5.0;
-const double SPEED_BUFFER = 6.0;
 
 inline double deg2rad(double x) { return x * M_PI / 180; }
 inline double mph_to_ms(double mph) { return mph / 2.24; }
 
-
+// d coord for center lane
+double Trajectory::getDPosition(LaneType lane) {
+  double dlane = static_cast<double>(lane);
+  double dcenter = (dlane + 0.5) * cfg_.laneWidth();
+  if (dcenter >= 10) {
+    // this a workaround for a simulator issue I think (reported by others as well on udacity forums)
+    // with d set to 10 from time to time a lane violation is reported by simulator
+    // while everything looks fine
+    dcenter = 9.8; // hack !!!
+  }
+  return dcenter;
+}
 
 TrajectoryJMT Trajectory::JMT_init(double car_s, double car_d)
 {
@@ -39,6 +41,83 @@ TrajectoryJMT Trajectory::JMT_init(double car_s, double car_d)
 
   return traj_jmt;
 }
+
+
+
+
+vector<double> Trajectory::JMT(vector< double> start, vector <double> end, double T)
+{
+    /*
+    Calculate the Jerk Minimizing Trajectory that connects the initial state
+    to the final state in time T.
+
+    INPUTS
+
+    start - the vehicles start location given as a length three array
+        corresponding to initial values of [s, s_dot, s_double_dot]
+
+    end   - the desired end state for vehicle. Like "start" this is a
+        length three array.
+
+    T     - The duration, in seconds, over which this maneuver should occur.
+
+    OUTPUT 
+    an array of length 6, each value corresponding to a coefficent in the polynomial 
+    s(t) = a_0 + a_1 * t + a_2 * t**2 + a_3 * t**3 + a_4 * t**4 + a_5 * t**5
+
+    EXAMPLE
+
+    > JMT( [0, 10, 0], [10, 10, 0], 1)
+    [0.0, 10.0, 0.0, 0.0, 0.0, 0.0]
+    */
+
+    MatrixXd A(3,3);
+    VectorXd b(3);
+    VectorXd x(3);
+
+    A <<   pow(T,3),    pow(T,4),    pow(T,5),
+         3*pow(T,2),  4*pow(T,3),  5*pow(T,4),
+                6*T, 12*pow(T,2), 20*pow(T,3);
+
+    b << end[0] - (start[0] + start[1]*T + 0.5*start[2]*T*T), 
+         end[1] - (start[1] + start[2]*T), 
+         end[2] - start[2];
+
+    x = A.inverse() * b;
+
+    return {start[0], start[1], start[2]/2, x[0], x[1], x[2]};
+}
+
+// c: coefficients of polynom
+double Trajectory::polyeval(vector<double> c, double t) {
+  double res = 0.0;
+  for (size_t i = 0; i < c.size(); i++) {
+    res += c[i] * pow(t, i);
+  }
+  return res;
+}
+
+// 1st derivative of a polynom
+double Trajectory::polyeval_dot(vector<double> c, double t) {
+  double res = 0.0;
+  for (size_t i = 1; i < c.size(); ++i) {
+    res += i * c[i] * pow(t, i-1);
+  }
+  return res;
+}
+
+// 2nd derivative of a polynom
+double Trajectory::polyeval_ddot(vector<double> c, double t) {
+  double res = 0.0;
+  for (size_t i = 2; i < c.size(); ++i) {
+    res += i * (i-1) * c[i] * pow(t, i-2);
+  }
+  return res;
+}
+
+
+
+
 
 Trajectory::Trajectory(Vehicle &car, const BehaviorType behavior, Map &map,
                        Config &cfg)
@@ -59,208 +138,133 @@ Trajectory::Trajectory(Vehicle &car, const BehaviorType behavior, Map &map,
  */
 }
 
+/*
 JMT Trajectory::get_jmt_s() const { return jmtPair_[0]; }
 
 JMT Trajectory::get_jmt_d() const { return jmtPair_[1]; }
+*/
 
-TrajectoryXY Trajectory::generateTrajectory(Vehicle &car,
-                                            const BehaviorType behavior,
-                                            TrajectoryXY &previous_path,
-                                            Target &target) {
-  TrajectoryXY trajectory;
-  int numPoints = target.time / cfg_.timeIncrement();
 
-  if (behavior == BehaviorType::KEEPLANE) {
-    trajectory = generateSplineBasedTrajectory(car, target, previous_path);
-  } else {
-    trajectory = generateJMTTrajectory(car, behavior, numPoints);
-  }
 
-  return trajectory;
-}
-
-// TODO: Incorporate previous path into the JMT generation
-TrajectoryXY Trajectory::generateJMTTrajectory(Vehicle &car,
-                                               const BehaviorType behavior,
-                                               int numPoints) {
-  // get target states based on behavior s component
-  double target_s =
-      car.saved_state_s.p + cfg_.traverseTime() * car.saved_state_s.v;
-  double target_v = car.saved_state_s.v;
-
-  if (behavior == BehaviorType::KEEPLANE) {
-    // If the car in front is going fast or we are very far from it anyway, go
-    // as fast as we can Else let's go a notch slower than the car in front
-    bool safe = (car.front_v > SPEED_LIMIT) || (car.front_gap > FRONT_BUFFER);
-    target_v = safe ? SPEED_LIMIT : (car.front_v - SPEED_BUFFER);
-
-    // But if the car in front is too slow, let's go a little faster
-    target_v = target_v > MIN_SPEED ? target_v : MIN_SPEED;
-
-    // Estimate a safe target distance based on our selected speed
-    target_s = car.saved_state_s.p +
-               cfg_.traverseTime() * 0.5 * (car.saved_state_s.v + target_v);
-  }
-
-  // target acceleration along the load is zero
-  targetState_s = {target_s, target_v, 0.0};
-
-  // get target d component state based on behavior
-  // target speed and acceleration sideways of the road are both zero
-  targetState_d = {car.get_target_d(behavior), 0.0, 0.0};
-
-  // generate JMTs
-  JMT jmt_s(car.saved_state_s, targetState_s, cfg_.traverseTime());
-  JMT jmt_d(car.saved_state_d, targetState_d, cfg_.traverseTime());
-
-  vector<double> xs;
-  vector<double> ys;
-  vector<double> p;
-
-  for (int i = 0; i < numPoints; i++) {
-    double s = jmt_s.get(i * cfg_.timeIncrement());
-    double d = jmt_d.get(i * cfg_.timeIncrement());
-
-    vector<double> p = map_.getXY(s, d);
-
-    xs.push_back(p[0]);
-    ys.push_back(p[1]);
-  }
-
-  XYPoints path = {xs, ys, numPoints};
-
-  return TrajectoryXY(xs, ys);
-}
-
-// We use Spline generated trajectories only for cases where we don't have to
-// switch lanes
-TrajectoryXY
-Trajectory::generateSplineBasedTrajectory(Vehicle &car, Target &target,
-                                          TrajectoryXY &previous_path) {
-  TrajectoryXY previous_path_xy = previous_path;
-  int prev_size = previous_path.pts.n;
+TrajectoryJMT Trajectory::generate_trajectory_jmt(Target target, Map &map, PreviousPath const &previous_path)
+{
+  TrajectoryJMT traj_jmt;
+  double max_speed_inc = cfg_.timeIncrement() * cfg_.acceleration();
+  TrajectoryXY previous_path_xy = previous_path.xy;
+  int prev_size = previous_path.num_xy_reused;
+  TrajectorySD prev_path_sd = previous_path.sd;
 
   vector<double> previous_path_x = previous_path_xy.pts.xs;
   vector<double> previous_path_y = previous_path_xy.pts.ys;
+  vector<PointCmp> prev_path_s = prev_path_sd.path_s;
+  vector<PointCmp> prev_path_d = prev_path_sd.path_d;
 
-  vector<double> ptsx;
-  vector<double> ptsy;
+  vector<PointCmp> new_path_s(cfg_.planAhead(), PointCmp(0,0,0));
+  vector<PointCmp> new_path_d(cfg_.planAhead(), PointCmp(0,0,0));
 
-  double ref_x = car.x;
-  double ref_y = car.y;
-  double ref_yaw = deg2rad(car.yaw);
-
-  if (prev_size < 2) {
-    double prev_car_x = car.x - cos(car.yaw);
-    double prev_car_y = car.y - sin(car.yaw);
-
-    ptsx.push_back(prev_car_x);
-    ptsx.push_back(car.x);
-
-    ptsy.push_back(prev_car_y);
-    ptsy.push_back(car.y);
+  int last_point;
+  if (cfg_.prevPathReuse() < cfg_.planAhead()) {
+    last_point = cfg_.planAhead() - previous_path_x.size() + prev_size - 1;
   } else {
-    ref_x = previous_path_x[prev_size - 1];
-    ref_y = previous_path_y[prev_size - 1];
-
-    double ref_x_prev = previous_path_x[prev_size - 2];
-    double ref_y_prev = previous_path_y[prev_size - 2];
-    ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
-
-    ptsx.push_back(ref_x_prev);
-    ptsx.push_back(ref_x);
-
-    ptsy.push_back(ref_y_prev);
-    ptsy.push_back(ref_y);
+    last_point = cfg_.planAhead() - 1;
   }
 
-  // We use Spline generated trajectories only for cases where we don't have to
-  // switch lanes
-  vector<double> next_wp0 =
-      map_.getXYspline(car.s + 30, car.get_target_d(BehaviorType::KEEPLANE));
-  vector<double> next_wp1 =
-      map_.getXYspline(car.s + 60, car.get_target_d(BehaviorType::KEEPLANE));
-  vector<double> next_wp2 =
-      map_.getXYspline(car.s + 90, car.get_target_d(BehaviorType::KEEPLANE));
+  double T = target.time; // 2 seconds si car_d center of line
 
-  ptsx.push_back(next_wp0[0]);
-  ptsx.push_back(next_wp1[0]);
-  ptsx.push_back(next_wp2[0]);
+  double si, si_dot=0, si_ddot;
+  double di, di_dot, di_ddot;
 
-  ptsy.push_back(next_wp0[1]);
-  ptsy.push_back(next_wp1[1]);
-  ptsy.push_back(next_wp2[1]);
+  si = prev_path_s[last_point].v;
+  si_dot = prev_path_s[last_point].v_dot;
+  si_ddot = prev_path_s[last_point].v_ddot;
 
-  for (int i = 0; i < ptsx.size(); i++) {
-    // shift car reference angle to 0 degrees
-    // transformation to local car's coordinates (cf MPC)
-    // last point of previous path at origin and its angle at zero degree
+  di      = prev_path_d[last_point].v;
+  di_dot  = prev_path_d[last_point].v_dot;
+  di_ddot = prev_path_d[last_point].v_ddot;
 
-    // shift and rotation
-    double shift_x = ptsx[i] - ref_x;
-    double shift_y = ptsy[i] - ref_y;
+  double sf, sf_dot, sf_ddot;
+  double df, df_dot, df_ddot;
 
-    ptsx[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
-    ptsy[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
+  if (target.velocity <= 10) { // mph
+    df_ddot =  0;
+    df_dot  =  0;
+    df      = di;
+
+    sf_ddot = 0;
+    sf_dot  = mph_to_ms(target.velocity);
+
+    // XXX
+    sf_dot = min(sf_dot, si_dot + 10 * max_speed_inc);
+    sf_dot = max(sf_dot, si_dot - 10 * max_speed_inc);
+
+    sf      = si + 2 * sf_dot * T;
+  } else {
+    df_ddot = 0;
+    df_dot  = 0;
+    df      = getDPosition(target.lane);
+
+    sf_ddot = 0;
+    sf_dot = mph_to_ms(target.velocity);
+    // we use JMT for lane changes only
+    // no need to try to reach amx speed during lane changes
+    sf_dot = min(sf_dot, 0.9 * cfg_.speedLimit());
+
+    // XXX just in case ...
+    sf_dot = min(sf_dot, si_dot + 10 * max_speed_inc);
+    sf_dot = max(sf_dot, si_dot - 10 * max_speed_inc);
+
+    sf = si + sf_dot * T;
   }
 
-  tk::spline spl;
-  spl.set_points(ptsx, ptsy);
+  vector<double> start_s = { si, si_dot, si_ddot};
+  vector<double> end_s = { sf, sf_dot, 0};
+
+  vector<double> start_d = { di, di_dot, di_ddot };
+  vector<double> end_d = { df, df_dot, df_ddot};
+
+  /////////////////////////////////////////////////////////////
+
+  vector<double> poly_s = JMT(start_s, end_s, T);
+  vector<double> poly_d = JMT(start_d, end_d, T);
 
   vector<double> next_x_vals;
   vector<double> next_y_vals;
-
+  
   for (int i = 0; i < prev_size; i++) {
+    new_path_s[i] = prev_path_s[cfg_.planAhead() - previous_path_x.size() + i];
+    new_path_d[i] = prev_path_d[cfg_.planAhead() - previous_path_x.size() + i];
+
     next_x_vals.push_back(previous_path_x[i]);
     next_y_vals.push_back(previous_path_y[i]);
   }
 
-  // Calculate how to break up spline points so that we travel at our desired
-  // reference velocity
-  double target_x = 30.0;
-  double target_y = spl(target_x);
-  double target_dist = sqrt(target_x * target_x + target_y * target_y);
+  //double t = 0.0; continuity point reused
+  double t = cfg_.timeIncrement();
+  for (int i = prev_size; i < cfg_.planAhead(); i++) {
+    double s = polyeval(poly_s, t);
+    double s_dot = polyeval_dot(poly_s, t);
+    double s_ddot = polyeval_ddot(poly_s, t);
 
-  double x_add_on = 0;
+    double d = polyeval(poly_d, t);
+    double d_dot = polyeval_dot(poly_d, t);
+    double d_ddot = polyeval_ddot(poly_d, t);
 
-  /* // If the car in front is going fast or we are very far from it anyway, go as
-  // fast as we can Else let's go a notch slower than the car in front
-  bool safe = (car.front_v > SPEED_LIMIT) || (car.front_gap > FRONT_BUFFER);
-  double target_v = safe ? SPEED_LIMIT : (car.front_v - SPEED_BUFFER);
+    new_path_s[i] = PointCmp(s, s_dot, s_ddot);
+    new_path_d[i] = PointCmp(d, d_dot, d_ddot);
 
-  // But if the car in front is too slow, let's go a little faster
-  target_v = target_v > MIN_SPEED ? target_v : MIN_SPEED; */
+    vector<double> point_xy = map.getXYspline(s, d);
 
-  // fill up the rest of our path planner after filing it with previous points
-  // here we will output the number of points defined in the planahead config.json parameter
-  for (int i = 1; i <= cfg_.planAhead() - prev_size; i++) {
-    // *************************
-    // Todo: change to allow for acceleration / deceleration up to a defined velocity
-    // *************************
-    double N = (target_dist / (cfg_.timeIncrement() *
-                               target.velocity));  // divide by 2.24: mph -> m/s
-    double x_point = x_add_on + target_x / N;
-    double y_point = spl(x_point);
+    next_x_vals.push_back(point_xy[0]);
+    next_y_vals.push_back(point_xy[1]);
 
-    x_add_on = x_point;
-
-    double x_ref = x_point;  // x_ref IS NOT ref_x !!!
-    double y_ref = y_point;
-
-    // rotate back to normal after rotating it earlier
-    x_point = (x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw));
-    y_point = (x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw));
-
-    x_point += ref_x;
-    y_point += ref_y;
-
-    next_x_vals.push_back(x_point);
-    next_y_vals.push_back(y_point);
+    t += cfg_.timeIncrement();
   }
 
-  return TrajectoryXY(next_x_vals, next_y_vals);
-}
+  traj_jmt.trajectory = TrajectoryXY(next_x_vals, next_y_vals);
+  traj_jmt.path_sd = TrajectorySD(new_path_s, new_path_d);
 
+  return traj_jmt;
+}
 
 
 TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,

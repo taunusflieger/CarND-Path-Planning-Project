@@ -8,28 +8,28 @@
 #include "vehicle.h"
 
 class Trajectory {
- public:
-  Trajectory(Config &cfg, Map &map) : cfg_(cfg), map_(map){};
-  Trajectory(Vehicle &car, const BehaviorType behavior, Map &map, Config &cfg);
-  TrajectoryXY generateJMTTrajectory(Vehicle &car, const BehaviorType behavior,
-                                     int numPoints);
-  TrajectoryXY generateSplineBasedTrajectory(Vehicle &car, Target &target,
-                                             TrajectoryXY &previous_path);
-  TrajectoryXY generateTrajectory(Vehicle &car, const BehaviorType behavior,
-                                  TrajectoryXY &previous_path, Target &target);
+  private:
+    double polyeval(vector<double> c, double t);
+    double polyeval_dot(vector<double> c, double t);
+    double polyeval_ddot(vector<double> c, double t);
+    double getDPosition(LaneType lane);
 
-  TrajectoryJMT generateSDTrajectory(Vehicle &car,
-                                     PreviousPath &previous_path,
-                                     Target &target);
-  TrajectoryJMT JMT_init(double car_s, double car_d);
-  
-  State targetState_d;
-  State targetState_s;
-  JMT get_jmt_s() const;
-  JMT get_jmt_d() const;
+   public:
+    Trajectory(Config &cfg, Map &map) : cfg_(cfg), map_(map){};
+    Trajectory(Vehicle &car, const BehaviorType behavior, Map &map, Config &cfg);
 
- private:
-  vector<JMT> jmtPair_;
-  Config &cfg_;
-  Map &map_;
+    TrajectoryJMT generateSDTrajectory(Vehicle &car,
+                                       PreviousPath &previous_path,
+                                       Target &target);
+
+    TrajectoryJMT generate_trajectory_jmt(Target target, Map &map, PreviousPath const &previous_path);
+    TrajectoryJMT JMT_init(double car_s, double car_d);
+    vector<double> JMT(vector<double> start, vector<double> end, double T);
+    State targetState_d;
+    State targetState_s;
+ 
+   private:
+
+    Config &cfg_;
+    Map &map_;
 };

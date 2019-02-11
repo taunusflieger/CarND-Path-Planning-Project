@@ -15,6 +15,12 @@ using namespace Eigen;
 
 Cost::Cost(Config &cfg) : cfg_(cfg) {}
 
+
+double Cost::getCost(TrajectoryCandidates& tc, Prediction &predictions) {
+  // TODO: incorporate collision detection 
+  return 0;
+}
+
 // checkCollision implements SAT (Separating Axis Theorem)
 // to identify collision between 2 convex rectangular objects
 // http://www.dyn4j.org/2010/01/sat/

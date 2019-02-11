@@ -15,7 +15,7 @@
     "traverseTime" :  1.0,
     "pathSizeCutOff" : 50,
     "prevPathReuse" : 20,
-    "planAhead" : 50.0,
+    "planAhead" : 80.0,
     "collisionBuffer" : 30.0,
     "sensor" : {
         "range-front" : 100.0,
