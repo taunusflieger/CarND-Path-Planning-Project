@@ -153,7 +153,7 @@ TrajectoryJMT Trajectory::generate_trajectory_jmt(Target target, Map &map, Previ
   TrajectoryXY previous_path_xy = previous_path.xy;
   int prev_size = previous_path.num_xy_reused;
   TrajectorySD prev_path_sd = previous_path.sd;
-
+  log_.write("***** generate_trajectory_jmt  *****");
   vector<double> previous_path_x = previous_path_xy.pts.xs;
   vector<double> previous_path_y = previous_path_xy.pts.ys;
   vector<PointCmp> prev_path_s = prev_path_sd.path_s;
@@ -263,6 +263,9 @@ TrajectoryJMT Trajectory::generate_trajectory_jmt(Target target, Map &map, Previ
   traj_jmt.trajectory = TrajectoryXY(next_x_vals, next_y_vals);
   traj_jmt.path_sd = TrajectorySD(new_path_s, new_path_d);
 
+  log_.of_ << "path_s.size = " << traj_jmt.path_sd.path_s.size()   << endl;
+  log_.write("***** ======== *****");
+  
   return traj_jmt;
 }
 
@@ -291,13 +294,17 @@ TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,
   vector<double> next_y_vals;
 
   double target_velocity_ms = target.velocity;
-
+  log_.write("***** generate_trajectory_sd  *****");
   double s, s_dot, s_ddot;
   double d, d_dot, d_ddot;
   if (prev_size > 3)
     prev_size = 3;
   if (prev_size > 0) {
     for (int i = 0; i < prev_size; i++) {
+      int len = previous_path_x.size();
+      int pa = cfg_.planAhead();
+      int b = prev_path_s.size();
+      log_.of_ << "len = " << len  << "\tpa = " << pa << "\tprev_path_s.size() = " << b << endl;
       new_path_s[i] = prev_path_s[cfg_.planAhead() - previous_path_x.size() + i];
       new_path_d[i] = prev_path_d[cfg_.planAhead() - previous_path_x.size() + i];
 
@@ -317,7 +324,7 @@ TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,
   s_ddot = target.acceleration;  
 
   double prev_s_dot = s_dot;
-  //log_.write("***** generate_trajectory_sd  *****");
+ 
   for (int i = prev_size; i < cfg_.planAhead(); i++) {
     // increase/decrease speed till target velocity is reached
     s_dot += s_ddot * cfg_.timeIncrement();
@@ -349,7 +356,7 @@ TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,
     next_y_vals.push_back(point_xy[1]);
     
   }
-  //log_.write("***** ======== *****");
+  log_.write("***** ======== *****");
   traj_jmt.trajectory = TrajectoryXY(next_x_vals, next_y_vals);
   traj_jmt.path_sd = TrajectorySD(new_path_s, new_path_d);
 

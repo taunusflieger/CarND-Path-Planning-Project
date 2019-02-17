@@ -42,6 +42,7 @@ private:
   Map &map_;
   static const char *StateNames[];
   static Triggers currentTrigger_;
+  static LaneType target_lane_;
   double ref_speed_;
   double ref_accel_;
   double front_gap_;

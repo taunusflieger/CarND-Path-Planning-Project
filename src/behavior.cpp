@@ -10,6 +10,8 @@
 #include "log.h"
 #include "trajectory.h"
 
+double deg2rad(double x) { return x * M_PI / 180; }
+
 extern Logger log_;
 
 #define COST_THRESHHOLD 1000
@@ -21,6 +23,7 @@ static FSM::Fsm<Behavior::States, Behavior::States::Ready, Behavior::Triggers>
     fsm;
 
 Behavior::Triggers Behavior::currentTrigger_ = Behavior::Triggers::Initialize;
+LaneType Behavior::target_lane_ = LaneType::UNSPECIFIED;
 
 Behavior::Behavior(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
                    Prediction &predictions, PreviousPath &prev_path, Map &map,
@@ -42,6 +45,7 @@ Behavior::Behavior(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
                         { States::LaneChangeRight    ,States::LaneKeep          ,Triggers::LaneChangeCompleted  ,[&]{return true;}  ,[&]{PerformLaneKeep(otherCars, egoCar, predictions);}}});
   // clang-format on
 
+  log_.of_ << "==== Behavior::Behavior  path_sd.size() = " << prev_path.sd.path_s.size() << endl;
   // Execute state machine and process state resulting from trigger processing
   fsm.execute(currentTrigger_);
 }
@@ -50,6 +54,7 @@ void Behavior::PerformPrepLaneChange(std::vector<Vehicle> &otherCars,
                                      Vehicle &egoCar,
                                      Prediction &predictions) {
   vector<TrajectoryCandidates> traj_candidates;
+  log_.of_ << "==== Behavior::PerformPrepLaneChange ====" << endl;
 
   // identify lanes to which we can transition
   vector<LaneType> alternate_lanes;
@@ -92,24 +97,34 @@ void Behavior::PerformPrepLaneChange(std::vector<Vehicle> &otherCars,
 
   double min_cost = MAXFLOAT;
   TrajectoryJMT jmt_traj;
-  LaneType target_lane;
+
   for (auto const &tc : traj_candidates) {
     if (tc.cost < min_cost) {
       min_cost = tc.cost;
       jmt_traj = tc.jmt_traj;
-      target_lane = tc.t.lane;
+      target_lane_ = tc.t.lane;
     }
   }
 
   if (min_cost < COST_THRESHHOLD) {
     resulting_trajectory_ = jmt_traj;
-    if (static_cast<int>(target_lane) < static_cast<int>(egoCar.lane))
+    log_.of_ << "path_sd.size() = " << resulting_trajectory_.path_sd.path_s.size() << endl;
+    if (static_cast<int>(target_lane_) < static_cast<int>(egoCar.lane))
+    {
       currentTrigger_ = Triggers::ChangeToLeft;
+      log_.of_ << "Triggers::ChangeToLeft" << endl;
+    } 
     else
+    {
       currentTrigger_ = Triggers::ChangeToRight;
-  } else
+      log_.of_ << "Triggers::ChangeToRight" << endl;
+    }
+  } else {
     // no suitable lane found. Stay on current lane
     currentTrigger_ = Triggers::LaneChangeNotDesireable;
+    log_.of_ << "Triggers::LaneChangeNotDesireable" << endl;
+  }
+   log_.write("***** ======== *****");
 };
 
 void Behavior::PerformReady(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
@@ -180,27 +195,56 @@ void Behavior::PerformLaneKeep(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
 void Behavior::PerformLaneChangeLeft(std::vector<Vehicle> &otherCars,
                                      Vehicle &egoCar,
                                      Prediction &predictions) {
+  log_.of_ << "==== Behavior::PerformLaneChangeLeft prev_path_.num_xy_reused = " << prev_path_.num_xy_reused  << endl;
   // At this point it is mainly a placeholder ensuring
   // that we finish the lane change prior to calculating a new trajectory
   // We define the period of a lane change as a black out period. This
   // is clearly not save, but a simplification
-  if (prev_path_.num_xy_reused > 20)
-    currentTrigger_ = Triggers::NewPredictions;
-  else
+
+  double target_d = egoCar.convert_lane_to_d(target_lane_);
+  if (egoCar.d > (target_d - 0.2) && egoCar.d < (target_d + 0.2))
     currentTrigger_ = Triggers::LaneChangeCompleted;
+  else
+    currentTrigger_ = Triggers::NewPredictions;
+
+  Trajectory trajectory(cfg_, map_);
+
+  Target t;
+  t.lane = target_lane_;
+  t.time = cfg_.traverseTime();
+  t.velocity = egoCar.v;
+  t.acceleration = 1.0;
+  resulting_trajectory_ = trajectory.generate_trajectory_jmt(t, map_, prev_path_);
+
+  log_.write("***** ======== *****");
 };
 
 void Behavior::PerformLaneChangeRight(std::vector<Vehicle> &otherCars,
                                       Vehicle &egoCar,
                                       Prediction &predictions) {
+
+  log_.of_ << "==== Behavior::PerformLaneChangeRight prev_path_.num_xy_reused = " << prev_path_.num_xy_reused << endl;
   // At this point it is mainly a placeholder ensuring
   // that we finish the lane change prior to calculating a new trajectory
   // We define the period of a lane change as a black out period. This
   // is clearly not save, but a simplification
-  if (prev_path_.num_xy_reused > 20)
-    currentTrigger_ = Triggers::NewPredictions;
-  else
+
+  double target_d = egoCar.convert_lane_to_d(target_lane_);
+  if (egoCar.d > (target_d - 0.2) && egoCar.d < (target_d + 0.2))
     currentTrigger_ = Triggers::LaneChangeCompleted;
+  else
+    currentTrigger_ = Triggers::NewPredictions;
+  
+  Trajectory trajectory(cfg_, map_);
+
+  Target t;
+  t.lane = target_lane_;
+  t.time = cfg_.traverseTime();
+  t.velocity = egoCar.v;
+  t.acceleration = 1.0;
+  resulting_trajectory_ = trajectory.generate_trajectory_jmt(t, map_, prev_path_);  
+
+  log_.write("***** ======== *****");
 };
 
 void Behavior::dbg_fsm(States from_state, States to_state, Triggers trigger) {
