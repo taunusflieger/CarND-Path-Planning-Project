@@ -200,7 +200,7 @@ int main(int argc, char **argv) {
            }
            log_.write("***** *************  *****");
  */
-           Prediction predictions(otherCars, egoCar, cfg.planAhead(), cfg);
+           Prediction predictions(otherCars, egoCar, cfg.planAhead(), map, cfg);
 
            Behavior behavior(otherCars, egoCar, predictions, previous_path, map, cfg);
 

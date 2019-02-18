@@ -15,7 +15,8 @@
         "iosfwd": "cpp",
         "functional": "cpp",
         "core": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "iostream": "cpp"
     },
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 10000,

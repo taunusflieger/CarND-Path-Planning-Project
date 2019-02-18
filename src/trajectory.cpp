@@ -204,7 +204,8 @@ TrajectoryJMT Trajectory::generate_trajectory_jmt(Target target, Map &map, Previ
     df      = getDPosition(target.lane);
 
     sf_ddot = 0;
-    sf_dot = mph_to_ms(target.velocity);
+    sf_dot = target.velocity; 
+    
     // we use JMT for lane changes only
     // no need to try to reach amx speed during lane changes
     sf_dot = min(sf_dot, 0.9 * cfg_.speedLimit());

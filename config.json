@@ -5,20 +5,20 @@
     "trackLength" : 6945.554,
     "laneWidth" : 4.0,
     "numLanes" : 3,
-    "targetSpeed" : 21.01088,
+    "targetSpeed" : 20.5,
     "speedLimit" : 22.352,
     "speedIncrease" : 0.08,
     "speedTolerance" : 0.2,
     "timeIncrement" : 0.02,
     "accelerationLimit" : 0.00001,
     "acceleration" : 8.0,
-    "traverseTime" :  2,
+    "traverseTime" :  2.2,
     "pathSizeCutOff" : 50,
     "prevPathReuse" : 20,
     "planAhead" : 50.0,
     "collisionBuffer" : 30.0,
     "sensor" : {
-        "range-front" : 100.0,
+        "range-front" : 70.0,
         "range-back" : 30.0
     },
     "trajectory" : {

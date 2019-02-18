@@ -79,6 +79,11 @@ struct XYPoints {
   int n;
 };
 
+struct XYCoord {
+  double x;
+  double y;
+};
+
 struct TrajectoryXY {
   XYPoints pts;
   TrajectoryXY(std::vector<double> XPts, std::vector<double> YPts) {
@@ -116,7 +121,7 @@ struct Target {
       : lane(l), velocity(v), acceleration(acceleration), s(s), time(t) {}
 };
 
-struct TrajectoryCandidates {
+struct TrajectoryCandidate {
   Target t;
   TrajectoryJMT jmt_traj;
   double cost;

@@ -53,7 +53,7 @@ Behavior::Behavior(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
 void Behavior::PerformPrepLaneChange(std::vector<Vehicle> &otherCars,
                                      Vehicle &egoCar,
                                      Prediction &predictions) {
-  vector<TrajectoryCandidates> traj_candidates;
+  vector<TrajectoryCandidate> traj_candidates;
   log_.of_ << "==== Behavior::PerformPrepLaneChange ====" << endl;
 
   // identify lanes to which we can transition
@@ -77,7 +77,7 @@ void Behavior::PerformPrepLaneChange(std::vector<Vehicle> &otherCars,
   vector<int> nearbycars = predictions.getNearbyCars(otherCars);
   for (auto const &target_lane : alternate_lanes) {
     // Create trajectories for target lane(s)
-    TrajectoryCandidates tc;
+    TrajectoryCandidate tc;
 
     tc.t.lane = target_lane;
     tc.t.time = cfg_.traverseTime();
