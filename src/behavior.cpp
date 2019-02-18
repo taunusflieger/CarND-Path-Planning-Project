@@ -25,6 +25,9 @@ static FSM::Fsm<Behavior::States, Behavior::States::Ready, Behavior::Triggers>
 Behavior::Triggers Behavior::currentTrigger_ = Behavior::Triggers::Initialize;
 LaneType Behavior::target_lane_ = LaneType::UNSPECIFIED;
 
+// Check if this approach works: in case we need to abort a lane change we reuse the previously generated trajectory
+TrajectoryJMT Behavior::resulting_trajectory_;
+
 Behavior::Behavior(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
                    Prediction &predictions, PreviousPath &prev_path, Map &map,
                    Config &cfg)
@@ -92,12 +95,15 @@ void Behavior::PerformPrepLaneChange(std::vector<Vehicle> &otherCars,
 
     Cost cost(cfg_);
     tc.cost = cost.getCost(tc, predictions);
+
+    log_.of_ << "Trajectory target lane = " << static_cast<int>(target_lane) << "\tcost = " << tc.cost << endl;
     traj_candidates.push_back(tc);
   }
 
   double min_cost = MAXFLOAT;
-  TrajectoryJMT jmt_traj;
 
+  TrajectoryJMT jmt_traj;
+  
   for (auto const &tc : traj_candidates) {
     if (tc.cost < min_cost) {
       min_cost = tc.cost;
@@ -107,6 +113,8 @@ void Behavior::PerformPrepLaneChange(std::vector<Vehicle> &otherCars,
   }
 
   if (min_cost < COST_THRESHHOLD) {
+    log_.of_ << "Found optimal trajectory lane = " << static_cast<int>(target_lane_) << "\tcost = " << min_cost << endl;
+
     resulting_trajectory_ = jmt_traj;
     log_.of_ << "path_sd.size() = " << resulting_trajectory_.path_sd.path_s.size() << endl;
     if (static_cast<int>(target_lane_) < static_cast<int>(egoCar.lane))

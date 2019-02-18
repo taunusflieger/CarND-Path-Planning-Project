@@ -8,6 +8,7 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+#include <cassert>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
@@ -57,8 +58,9 @@ int main(int argc, char **argv) {
   // map.plot();
 
   h.onMessage([&cfg, &map, &just_starting, &prev_path_sd](uWS::WebSocket<uWS::SERVER> ws,
-                                           char *data, size_t length,
-                                           uWS::OpCode opCode) {
+                                                          char *data, size_t length,
+                                                          uWS::OpCode opCode) {
+    log_.write("====== onMessage BEGIN ======");
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -172,13 +174,14 @@ int main(int argc, char **argv) {
           if (just_starting) {
             Trajectory trajectory(cfg, map);
             TrajectoryJMT traj_jmt = trajectory.JMT_init(egoCar.s, egoCar.d);
-/* 
+            /* 
             log_.write("**** Initial trajectory *****");
             for (int i = 0; i < traj_jmt.path_sd.path_s.size(); i++)
               log_.of_ << "s = " << traj_jmt.path_sd.path_s[i].v << "\td = " << traj_jmt.path_sd.path_d[i].v << endl;
             log_.write("***** Initial trajectory - created *****");
           */   
             prev_path_sd = traj_jmt.path_sd;
+
             just_starting = false;
           }
 
@@ -189,8 +192,8 @@ int main(int argc, char **argv) {
           // points _before_ prev_size are kept from previous generated trajectory
           // points _after_  prev_size will be re-generated
           PreviousPath previous_path = PreviousPath(prev_path_xy, prev_path_sd, min(prev_path_xy.pts.n, cfg.prevPathReuse()));
-          
-         /*  log_.write("***** Previous path  *****");
+
+          /*  log_.write("***** Previous path  *****");
           for (int i = 0; i < previous_path.sd.path_d.size(); i++) {
             log_.of_ << "s = " << previous_path.sd.path_s[i].v << "\td = " << previous_path.sd.path_d[i].v;
             if (i < previous_path.xy.pts.xs.size()) 
@@ -200,41 +203,45 @@ int main(int argc, char **argv) {
            }
            log_.write("***** *************  *****");
  */
-           Prediction predictions(otherCars, egoCar, cfg.planAhead(), map, cfg);
+          Prediction predictions(otherCars, egoCar, cfg.planAhead(), map, cfg);
 
-           Behavior behavior(otherCars, egoCar, predictions, previous_path, map, cfg);
+          Behavior behavior(otherCars, egoCar, predictions, previous_path, map, cfg);
 
-           // Trajectory trajectory(egoCar, BehaviorType::KEEPLANE, map, cfg);
+          // Trajectory trajectory(egoCar, BehaviorType::KEEPLANE, map, cfg);
 
-           // Update saved state of our car (THIS IS IMPORTANT) with the latest
-           // generated target states, this is to be used as the starting state
-           // when generating a trajectory next time
-           // egoCar.update_save_states(trajectory.targetState_s,
-           // trajectory.targetState_d);
+          // Update saved state of our car (THIS IS IMPORTANT) with the latest
+          // generated target states, this is to be used as the starting state
+          // when generating a trajectory next time
+          // egoCar.update_save_states(trajectory.targetState_s,
+          // trajectory.targetState_d);
 
-           // convert this trajectory in the s-d frame to to discrete XY points
-           // the simulator can understand
-           TrajectoryJMT traj = behavior.getPlanningResult();
-           TrajectoryXY traj_xy = traj.trajectory;
-           prev_path_sd = traj.path_sd;
+          // convert this trajectory in the s-d frame to to discrete XY points
+          // the simulator can understand
+          TrajectoryJMT traj = behavior.getPlanningResult();
+          TrajectoryXY traj_xy = traj.trajectory;
+          log_.of_ << "traj.path_sd.path_d.size() = " << traj.path_sd.path_d.size() << endl;
+          log_.of_ << "traj.path_sd.path_s.size() = " << traj.path_sd.path_s.size() << endl;
+          prev_path_sd = traj.path_sd;
 
-           if (traj_xy.pts.xs.size() > 0) {
-             XYPoints NextXY_points;
-             NextXY_points = traj_xy.pts;
-             NextXY_points.n = traj_xy.pts.n;
+          assert(prev_path_sd.path_s.size() > 0);
 
-             //for (int i = 0; i < NextXY_points.n; i++)
-             //    cout << "x = " << NextXY_points.xs[i] << "\ty = " << NextXY_points.ys[i] << endl;
-/* 
+          if (traj_xy.pts.xs.size() > 0) {
+            XYPoints NextXY_points;
+            NextXY_points = traj_xy.pts;
+            NextXY_points.n = traj_xy.pts.n;
+
+            //for (int i = 0; i < NextXY_points.n; i++)
+            //    cout << "x = " << NextXY_points.xs[i] << "\ty = " << NextXY_points.ys[i] << endl;
+            /* 
             log_.write("***** New path  *****");
             for (int i = 0; i < NextXY_points.xs.size(); i++) {
                 log_.of_ << "\tx = " << NextXY_points.xs[i]  << "\ty = " << NextXY_points.ys[i] << endl;
             }
             log_.write("***** *************  *****");
  */
-             prev_path_xy.pts.xs = NextXY_points.xs;
-             prev_path_xy.pts.ys = NextXY_points.ys;
-             prev_path_xy.pts.n = prev_path_xy.pts.xs.size();
+            prev_path_xy.pts.xs = NextXY_points.xs;
+            prev_path_xy.pts.ys = NextXY_points.ys;
+            prev_path_xy.pts.n = prev_path_xy.pts.xs.size();
           }
         
 
@@ -254,7 +261,7 @@ int main(int argc, char **argv) {
           double t_diff = (((double)tend.tv_sec + 1.0e-9 * tend.tv_nsec) -
                            ((double)tstart.tv_sec + 1.0e-9 * tstart.tv_nsec)) *
                           1000;
-
+          log_.write("====== onMessage END ======");
           // cout << "Process message duration: " << t_diff << "ms" << endl;
         }
       } else {

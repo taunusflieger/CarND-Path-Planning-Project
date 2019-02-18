@@ -37,7 +37,7 @@ public:
 private:
   // This contains the trajectory which represents the result of the planning
   // process
-  TrajectoryJMT resulting_trajectory_;
+  static TrajectoryJMT resulting_trajectory_;
   PreviousPath &prev_path_;
   Map &map_;
   static const char *StateNames[];

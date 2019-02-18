@@ -28,7 +28,7 @@
         "reuse-n-points" : 40
     },
     "car" : {
-        "safetyLength" : 5.0,
+        "safetyLength" : 20.0,
         "safetyWidth" : 2.0
     }
 }

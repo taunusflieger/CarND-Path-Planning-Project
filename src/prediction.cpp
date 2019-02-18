@@ -16,41 +16,41 @@
 
 extern Logger log_;
 
-
-
 Prediction::Prediction(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
                        int planning_horizon, Map &map, Config &cfg)
     : egoCar_(egoCar), cfg_(cfg) {
   std::vector<int> nearbyCars;
-
-  nearbyCars = getNearbyCars(otherCars); 
+  log_.write("==== Prediction::Prediction ====");
+  nearbyCars = getNearbyCars(otherCars);
 
   // Calculate trajectories for nearby cars on each lane
   LaneTrajectories laneTraj;
-  for (int i= 0; i < nearbyCars.size(); i++) {
+  for (int i = 0; i < nearbyCars.size(); i++) {
     Target t;
-    PreviousPath prev_path; // is empty on purpose
+    PreviousPath prev_path;  // is empty on purpose
+    int car_idx = nearbyCars[i];
+    if (car_idx > -1) {
+      t.velocity = otherCars[car_idx].v;
+      t.time = cfg_.traverseTime();
+      t.lane = otherCars[car_idx].lane;
+      t.acceleration = 1;
 
-    t.velocity = otherCars[i].v;
-    t.time = cfg_.traverseTime();
-    t.lane = otherCars[i].lane;
-    t.acceleration = 1;
-
-    Trajectory trajectory(cfg_, map);
-    if ((i+1) %2 != 0)
-      laneTraj.front_jmt = trajectory.generateSDTrajectory(otherCars[i], prev_path, t);
-    else 
-      laneTraj.back_jmt = trajectory.generateSDTrajectory(otherCars[i], prev_path, t);
-
+      Trajectory trajectory(cfg_, map);
+      if ((i + 1) % 2 != 0) {
+        laneTraj.front_jmt = trajectory.generateSDTrajectory(otherCars[car_idx], prev_path, t);
+        laneTraj.front_valid = true;
+      } else {
+        laneTraj.back_jmt = trajectory.generateSDTrajectory(otherCars[car_idx], prev_path, t);
+        laneTraj.back_valid = true;
+      }
+    }
     predictions_[i] = laneTraj;
   }
+  log_.write("==== ***** ====");
 }
 
-
-
-
 std::vector<int>
-Prediction::getNearbyCars(std::vector<Vehicle>  &otherCars) {
+Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
   std::vector<double> distance_back_object = {INFINITY, INFINITY, INFINITY};
   std::vector<double> distance_front_object = {INFINITY, INFINITY, INFINITY};
 
@@ -72,18 +72,18 @@ Prediction::getNearbyCars(std::vector<Vehicle>  &otherCars) {
   sfov_max += sfov_wrap;
   assert(sfov_min >= 0 && sfov_min <= cfg_.trackLength());
   assert(sfov_max >= 0 && sfov_max <= cfg_.trackLength());
-  // log_.write("Prediction::getNearbyCars =================");
+  log_.write("===== Prediction::getNearbyCars =====");
 
   for (size_t i = 0; i < otherCars.size(); i++) {
     double s = otherCars[i].s + sfov_wrap;
     double dist = fabs(s - egoCar_.s + sfov_wrap);
-    
+
     // Check if other car is in sensor range
     if (s >= sfov_min && s <= sfov_max) {
       LaneType lane = otherCars[i].convert_d_to_lane();
-      
+
       if (lane == LaneType::UNSPECIFIED)
-        continue; // ignore error from simulator
+        continue;  // ignore error from simulator
 
       // og_.of_ << "other car id = " << otherCars[i].id << "\tlane = " << static_cast<int>(lane) << "\tvelocity = " << otherCars[i].v;
 
@@ -102,47 +102,67 @@ Prediction::getNearbyCars(std::vector<Vehicle>  &otherCars) {
       }
     }
   }
-  /* 
+
   log_.of_ << nearby_front_[0] << " , " << nearby_back_[0] << endl
            << nearby_front_[1] << " , " << nearby_back_[1] << endl
            << nearby_front_[2] << " , " << nearby_back_[2] << endl;
 
- */  // log_.write("Prediction::getNearbyCars =================");
+  log_.write("==== ***** =====");
   //
   //
-  
 
-  
   return {nearby_front_[0], nearby_back_[0], nearby_front_[1], nearby_back_[1], nearby_front_[2], nearby_back_[2]};
 }
 
-
 // Check a trajectory candidate for collision risk with other cars
-bool Prediction::IsTrajectoryCollisionFree(TrajectoryCandidate &tc)
-{
+bool Prediction::IsTrajectoryCollisionFree(TrajectoryCandidate &tc) {
+  log_.of_ << "==== Prediction::IsTrajectoryCollisionFree ====" << endl;
+  bool front = true, back = true;
   int lane = static_cast<int>(tc.t.lane);
   XYPoints front_xy = predictions_[lane].front_jmt.trajectory.pts;
   XYPoints back_xy = predictions_[lane].back_jmt.trajectory.pts;
 
-  return checkIndividualOtherCar(front_xy, tc) && checkIndividualOtherCar(back_xy, tc);
+  /* log_.of_ << "front x size = " << front_xy.xs.size() << endl;
+  log_.of_ << "back x size = " << back_xy.xs.size() << endl; */
+
+  if (predictions_[lane].front_valid) {
+    front = checkIndividualOtherCar(front_xy, tc);
+    if (front) 
+      log_.of_ << "Check lane = " << lane << " font: no collision" << endl;
+    else
+      log_.of_ << "Check lane = " << lane << " font: COLLISION" << endl;
+  }
+
+  
+  if (predictions_[lane].back_valid) {
+    back = checkIndividualOtherCar(back_xy, tc);
+    if (back)
+      log_.of_ << "Check lane = " << lane << " back: no collision" << endl;
+    else
+      log_.of_ << "Check lane = " << lane << " back: COLLISION" << endl;
+   
+  }
+ 
+
+  log_.of_ << "==== ****** ====" << endl;
+  return front & back;
 }
 
-// Check for an individual other car if a collision can occur 
-bool Prediction::checkIndividualOtherCar(XYPoints& pts, TrajectoryCandidate& tc)
-{
-  assert(pts.xs.size() <= cfg_.planAhead());
+// Check for an individual other car if a collision can occur
+bool Prediction::checkIndividualOtherCar(XYPoints &pts, TrajectoryCandidate &tc) {
+  assert(pts.xs.size() >= cfg_.planAhead());
 
   for (int i = 0; i < cfg_.planAhead(); i++) {
     double obj_x = pts.xs[i];
     double obj_y = pts.ys[i];
-    double obj_x_next = pts.xs[i+1];
-    double obj_y_next = pts.ys[i+1];
+    double obj_x_next = pts.xs[i + 1];
+    double obj_y_next = pts.ys[i + 1];
     double obj_heading = atan2(obj_y_next - obj_y, obj_x_next - obj_x);
 
     double ego_x = tc.jmt_traj.trajectory.pts.xs[i];
     double ego_y = tc.jmt_traj.trajectory.pts.ys[i];
-    double ego_x_next = tc.jmt_traj.trajectory.pts.xs[i+1];
-    double ego_y_next = tc.jmt_traj.trajectory.pts.xs[i+1];
+    double ego_x_next = tc.jmt_traj.trajectory.pts.xs[i + 1];
+    double ego_y_next = tc.jmt_traj.trajectory.pts.xs[i + 1];
     double ego_heading = atan2(ego_y_next - ego_y, ego_x_next - ego_x);
 
     if (checkCollision(obj_x, obj_y, obj_heading, ego_x, ego_y, ego_heading)) {
@@ -157,8 +177,7 @@ bool Prediction::checkIndividualOtherCar(XYPoints& pts, TrajectoryCandidate& tc)
 // to identify collision between 2 convex rectangular objects
 // http://www.dyn4j.org/2010/01/sat/
 bool Prediction::checkCollision(double s0, double d0, double theta0, double s1,
-                          double d1, double theta1) {
-
+                                double d1, double theta1) {
   // set safety distance (to vehicle heading)
   double safety_dist_lon = cfg_.carSafetyLength();
   double safety_dist_lat = cfg_.carSafetyWidth();

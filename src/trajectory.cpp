@@ -275,12 +275,12 @@ TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,
                                                PreviousPath &previous_path,
                                                Target &target) {
   TrajectoryJMT traj_jmt;
-
+  log_.write("***** generate_trajectory_sd  *****");
   //for (int i = 0; i < previous_path.xy.pts.xs.size(); i++)
   //              cout << "prev x = " << previous_path.xy.pts.xs[i] << "\tprev y = " << previous_path.xy.pts.ys[i] << endl;
-
+  log_.of_ << "previous_path_xy size = " << previous_path.xy.pts.xs.size() << endl;
   TrajectoryXY previous_path_xy = previous_path.xy;
-  int prev_size = previous_path.num_xy_reused;
+  int prev_size = previous_path.xy.pts.xs.size();  // previous_path.num_xy_reused;
   TrajectorySD prev_path_sd = previous_path.sd;
 
   vector<double> previous_path_x = previous_path_xy.pts.xs;
@@ -295,7 +295,7 @@ TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,
   vector<double> next_y_vals;
 
   double target_velocity_ms = target.velocity;
-  log_.write("***** generate_trajectory_sd  *****");
+ 
   double s, s_dot, s_ddot;
   double d, d_dot, d_ddot;
   if (prev_size > 3)
@@ -357,9 +357,11 @@ TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,
     next_y_vals.push_back(point_xy[1]);
     
   }
+  log_.of_ << "path_s.size = " << new_path_s.size() << endl;
+  log_.of_ << "path_d.size = " << new_path_d.size() << endl;
   log_.write("***** ======== *****");
   traj_jmt.trajectory = TrajectoryXY(next_x_vals, next_y_vals);
   traj_jmt.path_sd = TrajectorySD(new_path_s, new_path_d);
-
+  log_.of_ << "traj_jmt.path_sd.path_d.size() = " << traj_jmt.path_sd.path_d.size() << endl;
   return traj_jmt;
 }

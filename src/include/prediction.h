@@ -7,6 +7,8 @@
 #include "trajectory.h"
 
 struct LaneTrajectories {
+  bool front_valid = false;
+  bool back_valid = false;
   TrajectoryJMT front_jmt;
   TrajectoryJMT back_jmt;
 };
