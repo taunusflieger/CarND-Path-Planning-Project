@@ -7,7 +7,7 @@
 class Cost {
 public:
  Cost(Config &cfg);
- double getCost(TrajectoryCandidate& tc, Prediction &predictions);
+ double getCost(TrajectoryCandidate& tc, Prediction &predictions, std::vector<Vehicle> &otherCars, Vehicle &egoCar);
 
 private:
  Config &cfg_;

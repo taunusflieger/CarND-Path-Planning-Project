@@ -17,6 +17,8 @@ class Prediction {
  public:
   Prediction(std::vector<Vehicle>  &otherCars, Vehicle  &egoCar,
              int planning_horizon, Map &map, Config  &cfg);
+
+  std::vector<int> getNearbyFrontCars();
   std::vector<int> getNearbyCars(std::vector<Vehicle>  &otherCars);
   bool IsTrajectoryCollisionFree(TrajectoryCandidate &tc);
 
@@ -30,7 +32,7 @@ class Prediction {
   // we indicate this through the value -1
   std::vector<int> nearby_front_ = {-1, -1, -1};
   std::vector<int> nearby_back_ = {-1, -1, -1};
-
+  
   bool checkIndividualOtherCar(XYPoints &pts, TrajectoryCandidate &tc);
   bool checkCollision(double s0, double d0, double theta0, double s1, double d1,
                       double theta1);

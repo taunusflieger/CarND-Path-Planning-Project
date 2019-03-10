@@ -94,7 +94,7 @@ void Behavior::PerformPrepLaneChange(std::vector<Vehicle> &otherCars,
     tc.jmt_traj = trajectory.generate_trajectory_jmt(tc.t, map_, prev_path_);
 
     Cost cost(cfg_);
-    tc.cost = cost.getCost(tc, predictions);
+    tc.cost = cost.getCost(tc, predictions, otherCars, egoCar);
 
     log_.of_ << "Trajectory target lane = " << static_cast<int>(target_lane) << "\tcost = " << tc.cost << endl;
     traj_candidates.push_back(tc);
