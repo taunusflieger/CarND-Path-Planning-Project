@@ -48,6 +48,4 @@ public:
   LaneType convert_d_to_lane() const;
   double convert_lane_to_d(const LaneType l);
   double convert_lane_to_d();
-  double get_target_d(const BehaviorType b);
-  double getTargetSpeed();
 };

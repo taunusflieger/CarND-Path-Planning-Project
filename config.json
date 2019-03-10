@@ -19,7 +19,7 @@
     "collisionBuffer" : 30.0,
     "sensor" : {
         "range-front" : 70.0,
-        "range-back" : 30.0
+        "range-back" : 70.0
     },
     "trajectory" : {
         "waypoint-dist" : 30.0,
@@ -28,7 +28,7 @@
         "reuse-n-points" : 40
     },
     "car" : {
-        "safetyLength" : 20.0,
+        "safetyLength" : 6.0,
         "safetyWidth" : 2.0
     }
 }

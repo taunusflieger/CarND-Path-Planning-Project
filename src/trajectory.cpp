@@ -122,27 +122,9 @@ double Trajectory::polyeval_ddot(vector<double> c, double t) {
 Trajectory::Trajectory(Vehicle &car, const BehaviorType behavior, Map &map,
                        Config &cfg)
     : cfg_(cfg), map_(map) {
-  /* 
-  // get target states based on behavior s component
-  double target_s =
-      car.saved_state_s.p + cfg.traverseTime() * car.saved_state_s.v;
-  double target_v = car.saved_state_s.v;
 
-  // target acceleration along the load is zero
-  targetState_s = {target_s, target_v, 0.0};
-
-  // get target d component state based on behavior
-  // target speed and acceleration sideways of the road are both zero
-  targetState_d = {car.get_target_d(behavior), 0.0, 0.0};
-
- */
 }
 
-/*
-JMT Trajectory::get_jmt_s() const { return jmtPair_[0]; }
-
-JMT Trajectory::get_jmt_d() const { return jmtPair_[1]; }
-*/
 
 
 

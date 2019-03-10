@@ -20,33 +20,55 @@ Prediction::Prediction(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
                        int planning_horizon, Map &map, Config &cfg)
     : egoCar_(egoCar), cfg_(cfg) {
   std::vector<int> nearbyCars;
+   
   log_.write("==== Prediction::Prediction ====");
   nearbyCars = getNearbyCars(otherCars);
 
-  // Calculate trajectories for nearby cars on each lane
-  LaneTrajectories laneTraj;
+  for (int i = 0; i < 3; i++) {
+    LaneTrajectories laneTraj;
+    laneTraj.front_valid = false;
+    laneTraj.back_valid = false;
+    predictions_[i] = laneTraj;
+  }
+
+    // Calculate trajectories for nearby cars on each lane
+   
   for (int i = 0; i < nearbyCars.size(); i++) {
     Target t;
     PreviousPath prev_path;  // is empty on purpose
+  
     int car_idx = nearbyCars[i];
+    
+
     if (car_idx > -1) {
+      int lane = static_cast<int>(otherCars[car_idx].lane);
+      log_.of_ << "creating others car traj for lane = " << lane << endl;
       t.velocity = otherCars[car_idx].v;
       t.time = cfg_.traverseTime();
       t.lane = otherCars[car_idx].lane;
       t.acceleration = 1;
-
+      
       Trajectory trajectory(cfg_, map);
       if (i % 2 != 0) {
-        laneTraj.back_jmt = trajectory.generateSDTrajectory(otherCars[car_idx], prev_path, t);
-        laneTraj.back_valid = true;
-        log_.of_ << "Trajectory generated for nearby car lane = " << (i/2) << " position: back" << endl;
+        //laneTraj.back_jmt = trajectory.generate_trajectory_jmt(t, map, prev_path);
+        predictions_[lane].back_jmt = trajectory.generateSDTrajectory(otherCars[car_idx], prev_path, t);
+        predictions_[lane].back_valid = true;
+        log_.of_ << "Trajectory generated for nearby car lane = " << lane << " position: back" << endl;
       } else {
-        laneTraj.front_jmt = trajectory.generateSDTrajectory(otherCars[car_idx], prev_path, t);
-        laneTraj.front_valid = true;
-        log_.of_ << "Trajectory generated for nearby car lane = " << (i/2) << " position: front" << endl;
+        //laneTraj.front_jmt = trajectory.generate_trajectory_jmt(t, map, prev_path);
+        predictions_[lane].front_jmt = trajectory.generateSDTrajectory(otherCars[car_idx], prev_path, t);
+        predictions_[lane].front_valid = true;
+        log_.of_ << "Trajectory generated for nearby car lane = " << lane << " position: front" << endl;
       }
     }
-    predictions_[i] = laneTraj;
+    else
+    { 
+      if (i % 2 != 0) 
+        log_.of_ << "no car on lane = " << (i/2) << " behind" << endl;
+      else 
+        log_.of_ << "no car on lane = " << (i/2) << " in front" << endl;
+
+    }
   }
   log_.write("==== ***** ====");
 }
@@ -79,7 +101,7 @@ Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
   sfov_max += sfov_wrap;
   assert(sfov_min >= 0 && sfov_min <= cfg_.trackLength());
   assert(sfov_max >= 0 && sfov_max <= cfg_.trackLength());
-  log_.write("===== Prediction::getNearbyCars =====");
+  log_.write("===== BEGIN Prediction::getNearbyCars =====");
 
   for (size_t i = 0; i < otherCars.size(); i++) {
     double s = otherCars[i].s + sfov_wrap;
@@ -87,25 +109,25 @@ Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
 
     // Check if other car is in sensor range
     if (s >= sfov_min && s <= sfov_max) {
-      LaneType lane = otherCars[i].convert_d_to_lane();
-
-      if (lane == LaneType::UNSPECIFIED)
+      int lane = static_cast<int>(otherCars[i].convert_d_to_lane());
+      
+      if (lane == static_cast<int>(LaneType::UNSPECIFIED))
         continue;  // ignore error from simulator
 
-      // og_.of_ << "other car id = " << otherCars[i].id << "\tlane = " << static_cast<int>(lane) << "\tvelocity = " << otherCars[i].v;
+      //log_.of_ << "other car id = " << otherCars[i].id << "\tlane = " << static_cast<int>(lane) << "\tvelocity = " << otherCars[i].v;
 
-      // if is in front of the ergCar and the distance to it is mall than
+      // if is in front of the ergCar and the distance to it is smaller than
       // the distance of a car we already have recorded
       if (s > (egoCar_.s + sfov_wrap) &&
-          (dist < distance_front_object[static_cast<int>(lane)])) {
-        nearby_front_[static_cast<int>(lane)] = i;
-        distance_front_object[static_cast<int>(lane)] = dist;
+          (dist < distance_front_object[lane])) {
+        nearby_front_[lane] = i;
+        distance_front_object[lane] = dist;
         otherCars[i].front_gap = dist;
-        // log_.of_ << "\tfront dist = " << dist << endl;
-      } else if (dist < distance_back_object[static_cast<int>(lane)]) {
-        nearby_back_[static_cast<int>(lane)] = i;
-        distance_back_object[static_cast<int>(lane)] = dist;
-        // log_.of_  << "\tback dist = " << dist << endl;
+        log_.of_ << "\tfront dist = " << dist << endl;
+      } else if (dist < distance_back_object[lane]) {
+        nearby_back_[lane] = i;
+        distance_back_object[lane] = dist;
+        log_.of_  << "\tback dist = " << dist << endl;
       }
     }
   }
@@ -114,7 +136,7 @@ Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
            << nearby_front_[1] << " , " << nearby_back_[1] << endl
            << nearby_front_[2] << " , " << nearby_back_[2] << endl;
 
-  log_.write("==== ***** =====");
+  log_.write("==== END Prediction::getNearbyCars =====");
   //
   //
 
@@ -131,7 +153,7 @@ bool Prediction::IsTrajectoryCollisionFree(TrajectoryCandidate &tc) {
 
   /* log_.of_ << "front x size = " << front_xy.xs.size() << endl;
   log_.of_ << "back x size = " << back_xy.xs.size() << endl; */
-
+  log_.of_ << "Check lane = " << lane << endl;
   if (predictions_[lane].front_valid) {
     front = checkIndividualOtherCar(front_xy, tc);
     if (front) 
@@ -271,8 +293,8 @@ bool overlap(vector<double> a, vector<double> b) {
 bool Prediction::checkCollision(double s0, double d0, double theta0, double s1, double d1, double theta1) {
   /* IMPLEMENT SEPERATION OF AXIS THEOREM for collision detection */
   // set safety distance (to vehicle heading)
-  double safety_dist_lon = 10;
-  double safety_dist_lat = 4;
+  double safety_dist_lon = cfg_.carSafetyLength();
+  double safety_dist_lat = cfg_.carSafetyWidth();
 
   // vehicle wrapper
   Eigen::MatrixXd rec_wrapper(2,4);
