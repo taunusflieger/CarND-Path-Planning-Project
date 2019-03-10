@@ -5,11 +5,9 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-#define WITHOUT_NUMPY
-#include "matplotlibcpp.h"
 
 using namespace std;
-namespace plt = matplotlibcpp;
+
 
 // For converting back and forth between radians and degrees.
 inline double deg2rad(double x) { return x * M_PI / 180; }
@@ -116,7 +114,6 @@ void Map::LoadData(string &filename) {
     high_res_map_waypoints_dy_.push_back(spline_dy_(s));
     high_res_map_waypoints_s_.push_back(s);
 
-    // cout << x << "\t" << idx << endl;
     idx++;
   }
 
@@ -125,10 +122,6 @@ void Map::LoadData(string &filename) {
   cout << "                                  avg = " << total_dist / (double)idx
        << "m" << endl;
   cout << "Number of points = " << idx - 1 << endl;
-
-  /* for (auto p : high_res_map_waypoints_sorted_x_) {
-  cout << p.value << " " << p.index << endl;
-}  */
 }
 
 double Map::distance(double x1, double y1, double x2, double y2) {
@@ -137,7 +130,7 @@ double Map::distance(double x1, double y1, double x2, double y2) {
 
 int Map::ClosestWaypoint2(double x, double y) {
   const int window_size = 60;
-  double closestDist = 100000; // large number
+  double closestDist = INFINITY; 
   int closestWaypoint = 0;
 
   // Coarse search through the map to identify area for
@@ -156,7 +149,7 @@ int Map::ClosestWaypoint2(double x, double y) {
 
   // Search within the identified segment for the
   // optimal matching point
-  closestDist = 100000;
+  closestDist = INFINITY;
   int start_idx = closestWaypoint - window_size;
   int end_idx = closestWaypoint + window_size;
 
@@ -179,7 +172,7 @@ int Map::ClosestWaypoint2(double x, double y) {
 }
 
 int Map::ClosestWaypoint(double x, double y) {
-  double closestLen = 100000; // large number
+  double closestLen = INFINITY; 
   int closestWaypoint = 0;
 
   for (int i = 0; i < high_res_map_waypoints_x_.size(); i++) {
@@ -261,7 +254,6 @@ vector<double> Map::getFrenet(double x, double y, double theta) {
   double frenet_d = distance(x_x, x_y, proj_x, proj_y);
 
   // see if d value is positive or negative by comparing it to a center point
-
   double center_x = cfg_.centerX() - high_res_map_waypoints_x_[prev_wp];
   double center_y = cfg_.centerY() - high_res_map_waypoints_y_[prev_wp];
   double centerToPos = distance(center_x, center_y, x_x, x_y);
@@ -302,7 +294,7 @@ vector<double> Map::getXY2(double s, double d) {
 
   double heading =
       atan2((maps_y[wp2] - maps_y[prev_wp]), (maps_x[wp2] - maps_x[prev_wp]));
-  // the x,y,s along the segment
+ 
   double seg_s = (s - maps_s[prev_wp]);
 
   double seg_x = maps_x[prev_wp] + seg_s * cos(heading);
@@ -330,7 +322,7 @@ vector<double> Map::getXY(double s, double d) {
   double heading = atan2(
       (high_res_map_waypoints_y_[wp2] - high_res_map_waypoints_y_[prev_wp]),
       (high_res_map_waypoints_x_[wp2] - high_res_map_waypoints_x_[prev_wp]));
-  // the x,y,s along the segment
+  
   double seg_s = (s - high_res_map_waypoints_s_[prev_wp]);
 
   double seg_x = high_res_map_waypoints_x_[prev_wp] + seg_s * cos(heading);
@@ -349,66 +341,4 @@ vector<double> Map::getXYspline(double s, double d) {
   double x = spline_x_(s) + d * spline_dx_(s);
   double y = spline_y_(s) + d * spline_dy_(s);
   return {x, y};
-}
-
-void Map::plot(void) {
-  plt::title("Map");
-  plt::plot(map_waypoints_x_, map_waypoints_y_, "b.");
-
-  vector<double> car_x = {1, 770.0906};
-  vector<double> car_y = {1, 1129.872};
-  plt::plot(car_x, car_y, "gD");
-  plt::show();
-}
-
-void Map::TestClosestWaypoint() {
-  clock_t start, end;
-  double cpu_time_used;
-  int error_cnt = 0;
-  for (int i = 0; i < high_res_map_waypoints_x_.size(); i++) {
-    double map_x = high_res_map_waypoints_x_[i] + 0.9;
-    double map_y = high_res_map_waypoints_y_[i] - 1.1;
-
-    int index1, index2;
-    index1 = ClosestWaypoint(map_x, map_y);
-    index2 = ClosestWaypoint2(map_x, map_y);
-
-    if (index1 != index2) {
-      cout << "Not matching index1=" << index1 << "\t index2=" << index2
-           << endl;
-      double dist1 = distance(high_res_map_waypoints_x_[index1],
-                              high_res_map_waypoints_y_[index1], map_x, map_y);
-      double dist2 = distance(high_res_map_waypoints_x_[index2],
-                              high_res_map_waypoints_y_[index2], map_x, map_y);
-      cout << "dist1 = " << dist1 << "\t dist2 = " << dist2 << endl;
-      error_cnt++;
-    }
-  }
-  cout << "Total error = " << error_cnt << endl;
-
-  start = clock();
-  for (int i = 0; i < high_res_map_waypoints_x_.size(); i++) {
-    double map_x = high_res_map_waypoints_x_[i] + 0.5;
-    double map_y = high_res_map_waypoints_y_[i] - 0.5;
-
-    int index1, index2;
-    index1 = ClosestWaypoint(map_x, map_y);
-  }
-  end = clock();
-  cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-
-  cout << "Time for ClosestWaypoint() " << cpu_time_used << " sec" << endl;
-
-  start = clock();
-  for (int i = 0; i < high_res_map_waypoints_x_.size(); i++) {
-    double map_x = high_res_map_waypoints_x_[i] + 0.5;
-    double map_y = high_res_map_waypoints_y_[i] - 0.5;
-
-    int index1, index2;
-    index1 = ClosestWaypoint2(map_x, map_y);
-  }
-  end = clock();
-  cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-
-  cout << "Time for ClosestWaypoint2() " << cpu_time_used << " sec" << endl;
 }

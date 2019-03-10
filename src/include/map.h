@@ -58,11 +58,8 @@ class Map {
   double distance(double x1, double y1, double x2, double y2);
   int ClosestWaypoint(double x, double y);
   int ClosestWaypoint2(double x, double y);
-
-  void TestClosestWaypoint();
   int NextWaypoint(double x, double y, double theta);
   XYPoints makePath(JMT jmt_s, JMT jmt_d, const double t, const int n);
   vector<double> getFrenet(double x, double y, double theta);
-  void plot(void);
   double deg2rad(double x) { return x * M_PI / 180; };
 };

@@ -53,10 +53,6 @@ int main(int argc, char **argv) {
   map.LoadData(map_file_);
   cout << "Map loaded" << endl;
 
-  // map.TestClosestWaypoint();
-
-  // map.plot();
-
   h.onMessage([&cfg, &map, &just_starting, &prev_path_sd](uWS::WebSocket<uWS::SERVER> ws,
                                                           char *data, size_t length,
                                                           uWS::OpCode opCode) {
@@ -65,34 +61,18 @@ int main(int argc, char **argv) {
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     static double v_old = 0;
-    static double call_cnt = 0;
+
     static long t_oldmsg = 0;
 
     // keep track of previous s and d paths: to initialize for continuity the
     // new trajectory we do the same for x,y path, but for this we get the
     // prev_path from the simulator
-   
 
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
-      struct timespec tstart = {0, 0}, tend = {0, 0};
-      clock_gettime(CLOCK_MONOTONIC, &tstart);
-
-      // Log time at start of processing received data
-      long t_msg = (long)chrono::time_point_cast<std::chrono::milliseconds>(
-                       chrono::high_resolution_clock::now())
-                       .time_since_epoch()
-                       .count();
-
-      // delta t between tow calls should be around 20ms. For the first call we
-      // set it fix to 20ms
-      long dt = (t_msg - t_oldmsg < 0
-                     ? 20
-                     : t_msg - t_oldmsg); // time between two calls (ms)
       auto s = hasData(data);
 
       if (s != "") {
         auto j = json::parse(s);
-        call_cnt++;
         string event = j[0].get<string>();
 
         if (event == "telemetry") {
@@ -103,11 +83,7 @@ int main(int argc, char **argv) {
           egoCar.update_position(j[1]["s"], j[1]["d"]);
           egoCar.updatePositionXY(j[1]["x"], j[1]["y"]);
           egoCar.updateYaw(j[1]["yaw"]);
-          egoCar.update_speed(((double)j[1]["speed"]) / 2.237); // mph => m/s
-          egoCar.specify_adjacent_lanes();
-          
-
-          cout << "SPEEDOMETER: car.speed=" << egoCar.v << endl;
+          egoCar.update_speed(((double)j[1]["speed"]) / 2.237);  // mph => m/s
 
           // Previous path data given to the Planner
           auto previous_path_x = j[1]["previous_path_x"];
@@ -127,21 +103,6 @@ int main(int argc, char **argv) {
           // car's s position in frenet coordinates, car's d position
           // in frenet coordinates.
           vector<vector<double>> raw_sensor_fusion = j[1]["sensor_fusion"];
-
-          t_oldmsg = t_msg;
-
-          /////////////////////////////////////////
-          // Localization
-          /////////////////////////////////////////
-
-          /////////////////////////////////////////
-          // Trajectory
-          /////////////////////////////////////////
-
-          /////////////////////////////////////////
-          // Behavior Planning
-          /////////////////////////////////////////
-
 
           // Our previous plan is about to run out, so append to it
           // Make a list of all relevant information about other cars
@@ -164,9 +125,11 @@ int main(int argc, char **argv) {
           }
 
           int prev_size = prev_path_xy.pts.xs.size();
-          log_.of_ << "prev_size=" << prev_size << " car.x=" << egoCar.x << " car.y=" << egoCar.y << " car.s=" << 
-                  egoCar.s << " car.d=" << egoCar.d << " car.speed=" << egoCar.v  << endl;
+          log_.of_ << "prev_size=" << prev_size << " car.x=" << egoCar.x << " car.y=" << egoCar.y << " car.s=" << egoCar.s << " car.d=" << egoCar.d << " car.speed=" << egoCar.v << endl;
 
+          /////////////////////////////////////////
+          // Localization
+          /////////////////////////////////////////
           vector<double> frenet_car = map.getFrenet(egoCar.x, egoCar.y, map.deg2rad(egoCar.yaw));
           egoCar.s = frenet_car[0];
           egoCar.d = frenet_car[1];
@@ -174,53 +137,28 @@ int main(int argc, char **argv) {
           if (just_starting) {
             Trajectory trajectory(cfg, map);
             TrajectoryJMT traj_jmt = trajectory.JMT_init(egoCar.s, egoCar.d);
-            /* 
-            log_.write("**** Initial trajectory *****");
-            for (int i = 0; i < traj_jmt.path_sd.path_s.size(); i++)
-              log_.of_ << "s = " << traj_jmt.path_sd.path_s[i].v << "\td = " << traj_jmt.path_sd.path_d[i].v << endl;
-            log_.write("***** Initial trajectory - created *****");
-          */   
             prev_path_sd = traj_jmt.path_sd;
-
             just_starting = false;
           }
 
           /////////////////////////////////////////
           // Prediction
           /////////////////////////////////////////
-          // -- prev_size: close to 100 msec when possible -not lower bcz of simulator latency- for trajectory (re)generation ---
-          // points _before_ prev_size are kept from previous generated trajectory
-          // points _after_  prev_size will be re-generated
           PreviousPath previous_path = PreviousPath(prev_path_xy, prev_path_sd, min(prev_path_xy.pts.n, cfg.prevPathReuse()));
-
-          /*  log_.write("***** Previous path  *****");
-          for (int i = 0; i < previous_path.sd.path_d.size(); i++) {
-            log_.of_ << "s = " << previous_path.sd.path_s[i].v << "\td = " << previous_path.sd.path_d[i].v;
-            if (i < previous_path.xy.pts.xs.size()) 
-              log_.of_ << "\tx = " << previous_path.xy.pts.xs[i] << "\ty = " << previous_path.xy.pts.ys[i] << endl;
-            else
-              log_.of_ << endl;
-           }
-           log_.write("***** *************  *****");
- */
           Prediction predictions(otherCars, egoCar, cfg.planAhead(), map, cfg);
 
+          /////////////////////////////////////////
+          // Behavior Planning
+          /////////////////////////////////////////
           Behavior behavior(otherCars, egoCar, predictions, previous_path, map, cfg);
 
-          // Trajectory trajectory(egoCar, BehaviorType::KEEPLANE, map, cfg);
-
-          // Update saved state of our car (THIS IS IMPORTANT) with the latest
-          // generated target states, this is to be used as the starting state
-          // when generating a trajectory next time
-          // egoCar.update_save_states(trajectory.targetState_s,
-          // trajectory.targetState_d);
-
+          /////////////////////////////////////////
+          // Trajectory
+          /////////////////////////////////////////
           // convert this trajectory in the s-d frame to to discrete XY points
           // the simulator can understand
           TrajectoryJMT traj = behavior.getPlanningResult();
           TrajectoryXY traj_xy = traj.trajectory;
-          log_.of_ << "traj.path_sd.path_d.size() = " << traj.path_sd.path_d.size() << endl;
-          log_.of_ << "traj.path_sd.path_s.size() = " << traj.path_sd.path_s.size() << endl;
           prev_path_sd = traj.path_sd;
 
           assert(prev_path_sd.path_s.size() > 0);
@@ -229,21 +167,10 @@ int main(int argc, char **argv) {
             XYPoints NextXY_points;
             NextXY_points = traj_xy.pts;
             NextXY_points.n = traj_xy.pts.n;
-
-            //for (int i = 0; i < NextXY_points.n; i++)
-            //    cout << "x = " << NextXY_points.xs[i] << "\ty = " << NextXY_points.ys[i] << endl;
-            /* 
-            log_.write("***** New path  *****");
-            for (int i = 0; i < NextXY_points.xs.size(); i++) {
-                log_.of_ << "\tx = " << NextXY_points.xs[i]  << "\ty = " << NextXY_points.ys[i] << endl;
-            }
-            log_.write("***** *************  *****");
- */
             prev_path_xy.pts.xs = NextXY_points.xs;
             prev_path_xy.pts.ys = NextXY_points.ys;
             prev_path_xy.pts.n = prev_path_xy.pts.xs.size();
           }
-        
 
           //*********************************
           //* Send updated path plan to simulator
@@ -255,14 +182,8 @@ int main(int argc, char **argv) {
 
           auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
-          // this_thread::sleep_for(chrono::milliseconds(1000));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          clock_gettime(CLOCK_MONOTONIC, &tend);
-          double t_diff = (((double)tend.tv_sec + 1.0e-9 * tend.tv_nsec) -
-                           ((double)tstart.tv_sec + 1.0e-9 * tstart.tv_nsec)) *
-                          1000;
           log_.write("====== onMessage END ======");
-          // cout << "Process message duration: " << t_diff << "ms" << endl;
         }
       } else {
         // Manual driving

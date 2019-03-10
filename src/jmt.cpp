@@ -25,7 +25,7 @@ JMT::JMT(const State& start, const State& end, const double t) {
 
     x = A.inverse() * b;
 
-    this->c << start.p,
+    c << start.p,
                start.v,
                start.a / 2.0,
                x[0],

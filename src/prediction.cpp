@@ -20,7 +20,7 @@ Prediction::Prediction(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
                        int planning_horizon, Map &map, Config &cfg)
     : egoCar_(egoCar), cfg_(cfg) {
   std::vector<int> nearbyCars;
-   
+
   log_.write("==== Prediction::Prediction ====");
   nearbyCars = getNearbyCars(otherCars);
 
@@ -31,43 +31,32 @@ Prediction::Prediction(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
     predictions_[i] = laneTraj;
   }
 
-    // Calculate trajectories for nearby cars on each lane
-   
+  // Calculate trajectories for nearby cars on each lane
   for (int i = 0; i < nearbyCars.size(); i++) {
     Target t;
-    PreviousPath prev_path;  // is empty on purpose
-  
-    int car_idx = nearbyCars[i];
-    
+    PreviousPath prev_path;  // is empty on purpose as we don't have the data
 
+    int car_idx = nearbyCars[i];
     if (car_idx > -1) {
       int lane = static_cast<int>(otherCars[car_idx].lane);
       log_.of_ << "creating others car traj for lane = " << lane << endl;
       t.velocity = otherCars[car_idx].v;
       t.time = cfg_.traverseTime();
       t.lane = otherCars[car_idx].lane;
-      t.acceleration = 1;
-      
+      t.acceleration = 1;  // we assume the other cars don't change speed
+
+      log_.of_ << "Other car car_idx = " << car_idx << " lane = " << static_cast<int>(otherCars[car_idx].lane) << " font distance = " << otherCars[car_idx].front_gap << endl;
+
       Trajectory trajectory(cfg_, map);
       if (i % 2 != 0) {
-        //laneTraj.back_jmt = trajectory.generate_trajectory_jmt(t, map, prev_path);
         predictions_[lane].back_jmt = trajectory.generateSDTrajectory(otherCars[car_idx], prev_path, t);
         predictions_[lane].back_valid = true;
         log_.of_ << "Trajectory generated for nearby car lane = " << lane << " position: back" << endl;
       } else {
-        //laneTraj.front_jmt = trajectory.generate_trajectory_jmt(t, map, prev_path);
         predictions_[lane].front_jmt = trajectory.generateSDTrajectory(otherCars[car_idx], prev_path, t);
         predictions_[lane].front_valid = true;
         log_.of_ << "Trajectory generated for nearby car lane = " << lane << " position: front" << endl;
       }
-    }
-    else
-    { 
-      if (i % 2 != 0) 
-        log_.of_ << "no car on lane = " << (i/2) << " behind" << endl;
-      else 
-        log_.of_ << "no car on lane = " << (i/2) << " in front" << endl;
-
     }
   }
   log_.write("==== ***** ====");
@@ -75,11 +64,14 @@ Prediction::Prediction(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
 
 std::vector<int>
 Prediction::getNearbyFrontCars() {
-  return {nearby_front_[0], nearby_front_[1],  nearby_front_[2], };
+  return {
+      nearby_front_[0],
+      nearby_front_[1],
+      nearby_front_[2],
+  };
 }
 
-std::vector<int>
-Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
+std::vector<int> Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
   std::vector<double> distance_back_object = {INFINITY, INFINITY, INFINITY};
   std::vector<double> distance_front_object = {INFINITY, INFINITY, INFINITY};
 
@@ -110,11 +102,11 @@ Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
     // Check if other car is in sensor range
     if (s >= sfov_min && s <= sfov_max) {
       int lane = static_cast<int>(otherCars[i].convert_d_to_lane());
-      
+
       if (lane == static_cast<int>(LaneType::UNSPECIFIED))
         continue;  // ignore error from simulator
 
-      //log_.of_ << "other car id = " << otherCars[i].id << "\tlane = " << static_cast<int>(lane) << "\tvelocity = " << otherCars[i].v;
+      log_.of_ << "other car id = " << otherCars[i].id << "\tlane = " << static_cast<int>(lane) << "\tvelocity = " << otherCars[i].v;
 
       // if is in front of the ergCar and the distance to it is smaller than
       // the distance of a car we already have recorded
@@ -127,7 +119,7 @@ Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
       } else if (dist < distance_back_object[lane]) {
         nearby_back_[lane] = i;
         distance_back_object[lane] = dist;
-        log_.of_  << "\tback dist = " << dist << endl;
+        log_.of_ << "\tback dist = " << dist << endl;
       }
     }
   }
@@ -137,8 +129,6 @@ Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
            << nearby_front_[2] << " , " << nearby_back_[2] << endl;
 
   log_.write("==== END Prediction::getNearbyCars =====");
-  //
-  //
 
   return {nearby_front_[0], nearby_back_[0], nearby_front_[1], nearby_back_[1], nearby_front_[2], nearby_back_[2]};
 }
@@ -156,38 +146,36 @@ bool Prediction::IsTrajectoryCollisionFree(TrajectoryCandidate &tc) {
   log_.of_ << "Check lane = " << lane << endl;
   if (predictions_[lane].front_valid) {
     front = checkIndividualOtherCar(front_xy, tc);
-    if (front) 
+    if (front)
       log_.of_ << "Check lane = " << lane << " font: no collision" << endl;
     else
       log_.of_ << "Check lane = " << lane << " font: COLLISION" << endl;
   }
 
-  
   if (predictions_[lane].back_valid) {
     back = checkIndividualOtherCar(back_xy, tc);
     if (back)
       log_.of_ << "Check lane = " << lane << " back: no collision" << endl;
     else
       log_.of_ << "Check lane = " << lane << " back: COLLISION" << endl;
-   
   }
-  
+
   // *** REMOVE
-  if (front & back)
+  if (front && back)
     log_.of_ << "No collision detected" << endl;
   else
     log_.of_ << "Collision detected" << endl;
-    
 
   log_.of_ << "==== ****** ====" << endl;
-  return front & back;
+  return (front && back);
 }
 
 // Check for an individual other car if a collision can occur
 bool Prediction::checkIndividualOtherCar(XYPoints &pts, TrajectoryCandidate &tc) {
   assert(pts.xs.size() >= cfg_.planAhead());
 
-  for (int i = 0; i < cfg_.planAhead(); i++) {
+  // Check for collision during the time span of the lane change
+  for (int i = 0; i < (int)(cfg_.traverseTime() / 0.02); i++) {
     double obj_x = pts.xs[i];
     double obj_y = pts.ys[i];
     double obj_x_next = pts.xs[i + 1];
@@ -200,28 +188,39 @@ bool Prediction::checkIndividualOtherCar(XYPoints &pts, TrajectoryCandidate &tc)
     double ego_y_next = tc.jmt_traj.trajectory.pts.xs[i + 1];
     double ego_heading = atan2(ego_y_next - ego_y, ego_x_next - ego_x);
 
-    if (checkCollision(obj_x, obj_y, obj_heading, ego_x, ego_y, ego_heading)) {
-      log_.of_ << "!!! ... COLLISION predicted on candidate trajectory at step " << i << "  ... !!!" << endl;
+    if (checkCollision(obj_x, obj_y, obj_heading, ego_x, ego_y, ego_heading)) 
       return false;
-    }
   }
   return true;
 }
-/*
-// checkCollision implements SAT (Separating Axis Theorem)
-// to identify collision between 2 convex rectangular objects
-// http://www.dyn4j.org/2010/01/sat/
-bool Prediction::checkCollision(double s0, double d0, double theta0, double s1,
-                                double d1, double theta1) {
+
+bool Prediction::contains(double n, vector<double> range) {
+  float a = range[0], b = range[1];
+  if (b < a) {
+    a = b;
+    b = range[0];
+  }
+  return (n >= a && n <= b);
+}
+
+bool Prediction::overlap(vector<double> a, vector<double> b) {
+  if (contains(a[0], b)) return true;
+  if (contains(a[1], b)) return true;
+  if (contains(b[0], a)) return true;
+  if (contains(b[1], a)) return true;
+  return false;
+}
+
+bool Prediction::checkCollision(double s0, double d0, double theta0, double s1, double d1, double theta1) {
+  /* IMPLEMENT SEPERATION OF AXIS THEOREM for collision detection */
   // set safety distance (to vehicle heading)
   double safety_dist_lon = cfg_.carSafetyLength();
   double safety_dist_lat = cfg_.carSafetyWidth();
 
   // vehicle wrapper
   Eigen::MatrixXd rec_wrapper(2, 4);
-  rec_wrapper << safety_dist_lon, safety_dist_lon, -safety_dist_lon,
-      -safety_dist_lon, -safety_dist_lat, safety_dist_lat, safety_dist_lat,
-      -safety_dist_lat;
+  rec_wrapper << safety_dist_lon, safety_dist_lon, -safety_dist_lon, -safety_dist_lon,
+      -safety_dist_lat, safety_dist_lat, safety_dist_lat, -safety_dist_lat;
 
   // rotate wrapper by heading
   Eigen::Matrix2d rot0, rot1;
@@ -241,8 +240,8 @@ bool Prediction::checkCollision(double s0, double d0, double theta0, double s1,
 
   // set principal axis list: normal + normal perpendicular
   Eigen::MatrixXd axis(2, 4);
-  axis << cos(theta0), sin(theta0), cos(theta1), sin(theta1), sin(theta0),
-      -cos(theta0), sin(theta1), -cos(theta1);
+  axis << cos(theta0), sin(theta0), cos(theta1), sin(theta1),
+      sin(theta0), -cos(theta0), sin(theta1), -cos(theta1);
 
   for (int i = 0; i < axis.cols(); i++) {
     Eigen::Vector2d principal_axis = axis.col(i);
@@ -251,90 +250,13 @@ bool Prediction::checkCollision(double s0, double d0, double theta0, double s1,
     double max0 = min0;
     for (int j = 0; j < rec0.cols(); j++) {
       double proj0 = principal_axis.dot(rec0.col(j));
-      if (proj0 > max0)
-        max0 = proj0;
-      if (proj0 < min0)
-        min0 = proj0;
-    }
-    // projection of rec1: get min, max
-    double min1 = principal_axis.dot(rec1.col(0));
-    double max1 = min1;
-    for (int j = 0; j < rec1.cols(); j++) {
-      double proj1 = principal_axis.dot(rec1.col(j));
-      if (proj1 > max1)
-        max1 = proj1;
-      if (proj1 < min1)
-        min1 = proj1;
-    }
-    // check overlap
-    return (min1 >= min0 && min1 < max0) || (max1 >= min0 && max1 < max0) ||
-           (min0 >= min1 && min0 < max1) || (max0 >= min1 && max0 < max1);
-  }
-  return true;
-}
-*/
-
-
-
-bool contains(double n, vector<double> range) {
-  float a = range[0], b = range[1];
-  if (b<a) {a=b; b=range[0];}
-  return (n >= a && n <= b);
-}
-
-bool overlap(vector<double> a, vector<double> b) {
-  if (contains(a[0], b)) return true;
-  if (contains(a[1], b)) return true;
-  if (contains(b[0], a)) return true;
-  if (contains(b[1], a)) return true;
-  return false;
-}
-
-bool Prediction::checkCollision(double s0, double d0, double theta0, double s1, double d1, double theta1) {
-  /* IMPLEMENT SEPERATION OF AXIS THEOREM for collision detection */
-  // set safety distance (to vehicle heading)
-  double safety_dist_lon = cfg_.carSafetyLength();
-  double safety_dist_lat = cfg_.carSafetyWidth();
-
-  // vehicle wrapper
-  Eigen::MatrixXd rec_wrapper(2,4);
-  rec_wrapper << safety_dist_lon, safety_dist_lon, -safety_dist_lon, -safety_dist_lon,
-                -safety_dist_lat, safety_dist_lat, safety_dist_lat, -safety_dist_lat;
-  // rotate wrapper by heading
-  Eigen::Matrix2d rot0, rot1;
-  rot0 << cos(theta0), -sin(theta0), sin(theta0), cos(theta0);
-  rot1 << cos(theta1), -sin(theta1), sin(theta1), cos(theta1);
-
-  Eigen::MatrixXd rec0(2,4);
-  Eigen::MatrixXd rec1(2,4);
-  Eigen::Vector2d trans0, trans1;
-  trans0 << s0, d0;
-  trans1 << s1, d1;
-
-  for (int i=0; i<rec_wrapper.cols(); i++){
-    rec0.col(i) = rot0 * rec_wrapper.col(i) + trans0;
-    rec1.col(i) = rot1 * rec_wrapper.col(i) + trans1;
-  }
-
-  // set principal axis list: normal + normal perpendicular
-  Eigen::MatrixXd axis(2,4);
-  axis << cos(theta0), sin(theta0), cos(theta1), sin(theta1),
-          sin(theta0), -cos(theta0), sin(theta1), -cos(theta1);
-
-  for (int i=0; i<axis.cols(); i++) {
-    Eigen::Vector2d principal_axis = axis.col(i);
-    // projection of rec0: get min, max
-    double min0 = principal_axis.dot(rec0.col(0));
-    double max0 = min0;
-    for (int j=0; j<rec0.cols(); j++){
-      double proj0 = principal_axis.dot(rec0.col(j));
       if (proj0 > max0) max0 = proj0;
       if (proj0 < min0) min0 = proj0;
     }
     // projection of rec1: get min, max
     double min1 = principal_axis.dot(rec1.col(0));
     double max1 = min1;
-    for (int j=0; j<rec1.cols(); j++){
+    for (int j = 0; j < rec1.cols(); j++) {
       double proj1 = principal_axis.dot(rec1.col(j));
       if (proj1 > max1) max1 = proj1;
       if (proj1 < min1) min1 = proj1;

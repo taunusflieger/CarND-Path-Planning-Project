@@ -12,5 +12,4 @@ public:
 private:
  Config &cfg_;
 
- 
 };

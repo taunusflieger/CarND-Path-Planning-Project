@@ -32,14 +32,9 @@ class Prediction {
   // we indicate this through the value -1
   std::vector<int> nearby_front_ = {-1, -1, -1};
   std::vector<int> nearby_back_ = {-1, -1, -1};
-  
+  bool contains(double n, vector<double> range);
+  bool overlap(vector<double> a, vector<double> b);
   bool checkIndividualOtherCar(XYPoints &pts, TrajectoryCandidate &tc);
   bool checkCollision(double s0, double d0, double theta0, double s1, double d1,
                       double theta1);
-
-  double dist_front_;
-  double vel_front_;
-  double time_to_collision_; // vs front vehicle
-  double time_to_stop_;      // time from vel_ego_ to 0
-
 };
