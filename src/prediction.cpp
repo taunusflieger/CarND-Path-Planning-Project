@@ -21,7 +21,7 @@ Prediction::Prediction(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
     : egoCar_(egoCar), cfg_(cfg) {
   std::vector<int> nearbyCars;
 
-  log_.write("==== Prediction::Prediction ====");
+  log_.write("==== BEGIN Prediction::Prediction ====");
   nearbyCars = getNearbyCars(otherCars);
 
   for (int i = 0; i < 3; i++) {
@@ -45,7 +45,7 @@ Prediction::Prediction(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
       t.lane = otherCars[car_idx].lane;
       t.acceleration = 1;  // we assume the other cars don't change speed
 
-      log_.of_ << "Other car car_idx = " << car_idx << " lane = " << static_cast<int>(otherCars[car_idx].lane) << " font distance = " << otherCars[car_idx].front_gap << endl;
+      log_.of_ << "Other car idx = " << car_idx << " car_id = " << otherCars[car_idx].id << " lane = " << static_cast<int>(otherCars[car_idx].lane) << " font distance = " << otherCars[car_idx].front_gap << endl;
 
       Trajectory trajectory(cfg_, map);
       if (i % 2 != 0) {
@@ -59,7 +59,7 @@ Prediction::Prediction(std::vector<Vehicle> &otherCars, Vehicle &egoCar,
       }
     }
   }
-  log_.write("==== ***** ====");
+  log_.write("==== END Prediction::Prediction ====");
 }
 
 std::vector<int>
@@ -106,28 +106,34 @@ std::vector<int> Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
       if (lane == static_cast<int>(LaneType::UNSPECIFIED))
         continue;  // ignore error from simulator
 
-      log_.of_ << "other car id = " << otherCars[i].id << "\tlane = " << static_cast<int>(lane) << "\tvelocity = " << otherCars[i].v;
+      log_.of_ << "other_car idx = " << i << "\tother car id = " << otherCars[i].id << "\tlane = " 
+               << static_cast<int>(lane) << " dist = " << dist << "\tvelocity = " << otherCars[i].v 
+               << " s = " << s << " egoCar_.s = " << egoCar_.s << " sfov_wrap = " << sfov_wrap 
+               << " distance_front_object[lane] = " 
+               << distance_front_object[lane];
 
       // if is in front of the ergCar and the distance to it is smaller than
       // the distance of a car we already have recorded
-      if (s > (egoCar_.s + sfov_wrap) &&
-          (dist < distance_front_object[lane])) {
+      if (s > (egoCar_.s + sfov_wrap) && (dist < distance_front_object[lane])) {
         nearby_front_[lane] = i;
         distance_front_object[lane] = dist;
         otherCars[i].front_gap = dist;
         log_.of_ << "\tfront dist = " << dist << endl;
-      } else if (dist < distance_back_object[lane]) {
+      } 
+      else if (dist < distance_back_object[lane]) {
         nearby_back_[lane] = i;
         distance_back_object[lane] = dist;
         log_.of_ << "\tback dist = " << dist << endl;
       }
+      else 
+        log_.of_ << endl;
     }
   }
-
-  log_.of_ << nearby_front_[0] << " , " << nearby_back_[0] << endl
-           << nearby_front_[1] << " , " << nearby_back_[1] << endl
-           << nearby_front_[2] << " , " << nearby_back_[2] << endl;
-
+  log_.of_ << "=============================================" << endl;
+  log_.of_ << "lane = 0: " << (nearby_front_[0] > 0 ? otherCars[nearby_front_[0]].id : -1) << " , " << (nearby_back_[0] > 0 ? otherCars[nearby_back_[0]].id : -1) << endl
+           << "lane = 1: " << (nearby_front_[1] > 0 ? otherCars[nearby_front_[1]].id : -1) << " , " << (nearby_back_[1] > 0 ? otherCars[nearby_back_[1]].id : -1) << endl
+           << "lane = 2: " << (nearby_front_[2] > 0 ? otherCars[nearby_front_[2]].id : -1) << " , " << (nearby_back_[2] > 0 ? otherCars[nearby_back_[2]].id : -1) << endl;
+  log_.of_ << "=============================================" << endl;
   log_.write("==== END Prediction::getNearbyCars =====");
 
   return {nearby_front_[0], nearby_back_[0], nearby_front_[1], nearby_back_[1], nearby_front_[2], nearby_back_[2]};
@@ -151,6 +157,11 @@ bool Prediction::IsTrajectoryCollisionFree(TrajectoryCandidate &tc) {
     else
       log_.of_ << "Check lane = " << lane << " font: COLLISION" << endl;
   }
+  else
+  {
+    log_.of_ << "Check lane = " << lane << " NO TRAJ DATA FOR FRONT" << endl;
+  }
+  
 
   if (predictions_[lane].back_valid) {
     back = checkIndividualOtherCar(back_xy, tc);
@@ -158,6 +169,10 @@ bool Prediction::IsTrajectoryCollisionFree(TrajectoryCandidate &tc) {
       log_.of_ << "Check lane = " << lane << " back: no collision" << endl;
     else
       log_.of_ << "Check lane = " << lane << " back: COLLISION" << endl;
+  }
+  else
+  {
+    log_.of_ << "Check lane = " << lane << " NO TRAJ DATA FOR BACK" << endl;
   }
 
   // *** REMOVE

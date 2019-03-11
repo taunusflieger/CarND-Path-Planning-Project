@@ -43,7 +43,7 @@ double Config::targetSpeed() { return j["targetSpeed"]; }
 
 double Config::acceleration() { return j["acceleration"]; }
 
-double Config::accelerationLimit(){ return j["accelerationLimit"]; }
+double Config::accelerationLimit() { return j["accelerationLimit"]; }
 
 double Config::speedLimit() { return j["speedLimit"]; }
 

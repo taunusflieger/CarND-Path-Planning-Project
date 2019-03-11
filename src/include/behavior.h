@@ -32,8 +32,6 @@ public:
 
   TrajectoryJMT getPlanningResult(void) { return resulting_trajectory_; };
 
-  void dbg_fsm(States from_state, States to_state, Triggers trigger);
-
 private:
   // This contains the trajectory which represents the result of the planning
   // process

@@ -75,7 +75,6 @@ TrajectoryJMT Trajectory::generate_trajectory_jmt(Target target, Map &map, Previ
   TrajectoryXY previous_path_xy = previous_path.xy;
   int prev_size = previous_path.num_xy_reused;
   TrajectorySD prev_path_sd = previous_path.sd;
-  log_.write("***** generate_trajectory_jmt  *****");
   vector<double> previous_path_x = previous_path_xy.pts.xs;
   vector<double> previous_path_y = previous_path_xy.pts.ys;
   vector<PointCmp> prev_path_s = prev_path_sd.path_s;
@@ -91,7 +90,7 @@ TrajectoryJMT Trajectory::generate_trajectory_jmt(Target target, Map &map, Previ
     last_point = cfg_.planAhead() - 1;
   }
 
-  double T = target.time;  // 2 seconds si car_d center of line
+  double T = target.time; 
 
   double si, si_dot = 0, si_ddot;
   double di, di_dot, di_ddot;
@@ -130,8 +129,6 @@ TrajectoryJMT Trajectory::generate_trajectory_jmt(Target target, Map &map, Previ
     // we use JMT for lane changes only
     // no need to try to reach amx speed during lane changes
     sf_dot = min(sf_dot, 0.9 * cfg_.speedLimit());
-
-    // XXX just in case ...
     sf_dot = min(sf_dot, si_dot + 10 * max_speed_inc);
     sf_dot = max(sf_dot, si_dot - 10 * max_speed_inc);
 
@@ -197,10 +194,6 @@ TrajectoryJMT Trajectory::generate_trajectory_jmt(Target target, Map &map, Previ
 
   traj_jmt.trajectory = TrajectoryXY(next_x_vals, next_y_vals);
   traj_jmt.path_sd = TrajectorySD(new_path_s, new_path_d);
-
-  log_.of_ << "path_s.size = " << traj_jmt.path_sd.path_s.size() << endl;
-  log_.write("***** ======== *****");
-
   return traj_jmt;
 }
 
@@ -208,9 +201,7 @@ TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,
                                                PreviousPath &previous_path,
                                                Target &target) {
   TrajectoryJMT traj_jmt;
-  log_.write("***** generate_trajectory_sd  *****");
-  //for (int i = 0; i < previous_path.xy.pts.xs.size(); i++)
-  //              cout << "prev x = " << previous_path.xy.pts.xs[i] << "\tprev y = " << previous_path.xy.pts.ys[i] << endl;
+  log_.write("***** BEGIN generate_trajectory_sd  *****");
   log_.of_ << "previous_path_xy size = " << previous_path.xy.pts.xs.size() << endl;
   TrajectoryXY previous_path_xy = previous_path.xy;
   int prev_size = previous_path.xy.pts.xs.size();  // previous_path.num_xy_reused;
@@ -279,13 +270,11 @@ TrajectoryJMT Trajectory::generateSDTrajectory(Vehicle &car,
     vector<double> point_xy = map_.getXYspline(s, d);
     double x = point_xy[0];
     double y = point_xy[1];
-    //if (s_ddot < 0)
-    //  log_.of_ << "s = " << s  << "\ts_dot = " << s_dot << "\ts_ddot = " << s_ddot << "\td = " << d << "\tx = " << x << "\ty = " << y << endl;
     next_x_vals.push_back(point_xy[0]);
     next_y_vals.push_back(point_xy[1]);
   }
 
-  log_.write("***** ======== *****");
+  log_.write("***** END generate_trajectory_sd  *****");
   traj_jmt.trajectory = TrajectoryXY(next_x_vals, next_y_vals);
   traj_jmt.path_sd = TrajectorySD(new_path_s, new_path_d);
  
