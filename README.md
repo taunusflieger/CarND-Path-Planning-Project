@@ -15,6 +15,17 @@ lane changes to drive as fast as possible but needs to respect the speed
 limit. Also, the car should not experience total acceleration over 10
 m/s\^2 and jerk that is greater than 10 m/s\^3
 
+## Path Planner
+### The Map
+The path planner is implemented in main.cpp. It first is initialized with the map data in form of way points. The way points are rather coarse and not precise enough for navigation on the map, therefore a high-resolution map (1m resolution) is generated using spline interpolation.
+
+### Sensor Data Loop
+Every 20ms the simulator sends sensor fusion data to path planner. The path planner processes this data using the following pipeline to create updated path information for the simulated ego car.
+
+
+![](media/Picture1.png){width="4.639045275590552in"
+height="3.794233377077865in"}
+
 Reflection
 ==========
 
