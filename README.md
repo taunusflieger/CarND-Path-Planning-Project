@@ -20,11 +20,29 @@ m/s\^2 and jerk that is greater than 10 m/s\^3
 The path planner is implemented in main.cpp. It first is initialized with the map data in form of way points. The way points are rather coarse and not precise enough for navigation on the map, therefore a high-resolution map (1m resolution) is generated using spline interpolation.
 
 ### Sensor Data Loop
-Every 20ms the simulator sends sensor fusion data to path planner. The path planner processes this data using the following pipeline to create updated path information for the simulated ego car.
+Every 20ms the simulator sends sensor fusion data to path planner. The path planner processes this data using the following pipeline to create updated path information for the vehicle motion controller of the simulated car.
+
+![](media/Picture1.png)
 
 
-![](media/Picture1.png){width="4.639045275590552in"
-height="3.794233377077865in"}
+### Localization
+The localization determines the position of the car in Frenet coordinates. 
+
+### Prediction
+Prediction creates trajectories for the cars nearby the ego car to create an understanding about their current position and behavior in the future. This information is used within the behavior planner to make decision regarding speed and lane of the ego car in the future. Prediction is implemented in the file prediction.cpp
+
+### Behavior Planning
+The behavior planning is based on a finite state machine approach to model different state the ego car can take. Depending on each state and the predictions about the other cars, behavior (state) changes will be determined.
+
+The following drawing shows the implemented state diagram
+![](media/Picture2.png)
+
+### Trajectory Generation
+
+
+
+
+
 
 Reflection
 ==========
