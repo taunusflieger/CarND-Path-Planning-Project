@@ -1,140 +1,438 @@
-# CarND-Path-Planning-Project
-Self-Driving Car Engineer Nanodegree Program
-   
-### Simulator.
-You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases/tag/T3_v1.2).
+Overview
+========
 
-### Goals
-In this project your goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. You will be provided the car's localization and sensor fusion data, there is also a sparse map list of waypoints around the highway. The car should try to go as close as possible to the 50 MPH speed limit, which means passing slower traffic when possible, note that other cars will try to change lanes too. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 10 m/s^3.
+The goal of the project is to safely navigate the ego car on the highway
+in the simulator. The highway has three lanes and other traffic is
+driving at a max speed of 50 PMH. The 50 MPH is the speed limit. The
+path planner receives the sensor fusion data from the simulator. The
+sensor fusion data contain location and speed information from
+surrounding traffic. Map data is available in the form of waypoints. The
+car needs to ensure to keep on the road and for most of the time within
+a lane (only for lane change the car should be outside of a lane). The
+car needs to drive safely and should not crash into other cars. It is
+not sufficient to stay only on the initial lane – the car should perform
+lane changes to drive as fast as possible but needs to respect the speed
+limit. Also, the car should not experience total acceleration over 10
+m/s\^2 and jerk that is greater than 10 m/s\^3
 
-#### The map of the highway is in data/highway_map.txt
-Each waypoint in the list contains  [x,y,s,dx,dy] values. x and y are the waypoint's map coordinate position, the s value is the distance along the road to get to that waypoint in meters, the dx and dy values define the unit normal vector pointing outward of the highway loop.
+Reflection
+==========
 
-The highway's waypoints loop around so the frenet s value, distance along the road, goes from 0 to 6945.554.
+The implementation of the path planner work pretty well. However, it
+doesn’t yet consider misbehaviour of other vehicles which could get to
+close to the ego vehicle.
 
-## Basic Build Instructions
+For future enhancements of the code I would continue the modularization
+into Behavior planner and trajestory planner. Especially, the
+implementation of a statechart for behavior planning and the evaluation
+of different behaviours and trajestories based on cost functions would
+improve the code of the path planner.
 
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./path_planning`.
+Write-up Behavior Planning
 
-Here is the data provided from the Simulator to the C++ Program
+1.  Got he car moving within the current lane
 
-#### Main car's localization Data (No Noise)
+2.  Ensure a smooth start
 
-["x"] The car's x position in map coordinates
+3.  Implemented Spline based trajectory planning for follow other car
+    scenario. Incorporated last points of old path to ensure that we are
+    not create jerk between the two pathes
 
-["y"] The car's y position in map coordinates
+4.  Implemented Polynominal trajectory planning for lane change. Again
+    incorporate previous path points as a starting point for the
+    trajectory. No lane change implemented.
 
-["s"] The car's s position in frenet coordinates
+5.  Up to here the ego crashes into other cars as they are incorporated
+    in any behavior planning
 
-["d"] The car's d position in frenet coordinates
+6.  Prediction
 
-["yaw"] The car's yaw angle in the map
+    a.  Implementing prediction. Out of all sensor fusion observation we
+        identify per lane the cars which are within the senor range
+        directly behind and in front of us. This gives us for each
+        lane (3) a back\_car and a front\_car, in total 6 cars.
 
-["speed"] The car's speed in MPH
+    b.  For those 6 cars we calculate their trajectories within the
+        planning horizon
 
-#### Previous path data given to the Planner
+    c.  For the egoCar we create 3 trajectories for each adjacent lanes
+        each with a different time horizon (d will be set to middle of
+        the lane)
 
-//Note: Return the previous list but with processed points removed, can be a nice tool to show how far along
-the path has processed since last time. 
+    d.  The remaining egoCar trajectories are provided as input to the
+        behavior planner
 
-["previous_path_x"] The previous list of x points previously given to the simulator
+7.  Behavior planning
 
-["previous_path_y"] The previous list of y points previously given to the simulator
+    a.  The behavior planner uses a FSM to evaluate potential target
+        actions based on the current state. Need to understand how to
+        deal with the “prepare lane change state”
 
-#### Previous path's end s and d values 
+        ![Finite state machine diagram for a self-driving car path
+        planner](media/image1.png){width="4.101449037620298in"
+        height="2.1194903762029744in"}
 
-["end_path_s"] The previous list's last point's frenet s value
+    b.  For each of the egoCar trajectories we first check for collision
+        with other cars on other lanes (for our lane we will later check
+        if we need to reduce speed to prevent a collision). The
+        collision check is based on the [SAT (Separating Axis
+        Theorem).](http://www.dyn4j.org/2010/01/sat/) This process
+        assumes that the other vehicles are moving with a constant
+        velocity. To ensure safety and a large enough gap for a lane
+        change, we assume a slightly higher speed if the vehicle is
+        behind us and a slightly slower speed if the vehicle is in front
+        of us (for those vehicles on other than our lane). This creates
+        a large enough gap for a lane change. We eliminate the
+        trajectories which will lead to a collision (no cost function is
+        used here)
 
-["end_path_d"] The previous list's last point's frenet d value
+    c.  The behavior planner applies a cost function to the trajectories
+        to identify the one with the lowest cost
 
-#### Sensor Fusion Data, a list of all other car's attributes on the same side of the road. (No Noise)
+    d.  Candidates for the cost function:
 
-["sensor_fusion"] A 2d vector of cars and then that car's [car's unique ID, car's x position in map coordinates, car's y position in map coordinates, car's x velocity in m/s, car's y velocity in m/s, car's s position in frenet coordinates, car's d position in frenet coordinates. 
+        i.  Jerk minimizing
 
-## Details
+        ii. speed
 
-1. The car uses a perfect controller and will visit every (x,y) point it recieves in the list every .02 seconds. The units for the (x,y) points are in meters and the spacing of the points determines the speed of the car. The vector going from a point to the next point in the list dictates the angle of the car. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration. The (x,y) point paths that the planner recieves should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3. (NOTE: As this is BETA, these requirements might change. Also currently jerk is over a .02 second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
+        iii. distance to car ahead
 
-2. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition. previous_path_x, and previous_path_y can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
+        iv. 
 
-## Tips
+![](media/image2.png){width="4.639045275590552in"
+height="3.794233377077865in"}
 
-A really helpful resource for doing this project and creating smooth trajectories was using http://kluge.in-chemnitz.de/opensource/spline/, the spline function is in a single hearder file is really easy to use.
+![](media/image3.png){width="5.414505686789151in"
+height="2.1368963254593174in"}
 
----
+![](media/image4.png){width="6.295833333333333in"
+height="3.5430555555555556in"}
 
-## Dependencies
+![](media/image5.png){width="2.7364599737532807in"
+height="2.884058398950131in"}
 
-* cmake >= 3.5
-  * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `install-mac.sh` or `install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
-    ```
-    git clone https://github.com/uWebSockets/uWebSockets 
-    cd uWebSockets
-    git checkout e94b6e1
-    ```
+![](media/image6.png){width="4.976201881014873in"
+height="1.5873786089238846in"}
 
-## Editor Settings
+![](media/image7.png){width="5.115941601049869in"
+height="1.603740157480315in"}
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  **State**             **Action**                                                                                                                                                                                              **Prerequisites for Trigger**                                                                 **Trigger**
+  --------------------- ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- --------------------------------------------------------------------------------------------- ---------------
+  Keep Lane             if EgoCar\_speed &lt; speed\_limit or CarAhead\_speed)                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                                              
+                        -   accelerate                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                              
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+                        if distance between EgoCar and CarAhead &lt; SafetyDist set EgoCar\_speed to CarAhead\_speed                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                              
+                        Create trajectory                                                                                                                                                                                                                                                                                     
 
-## Code Style
+  Prepare Lane Change                                                                                                                                                                                                           CarAhead\_speed &lt; speed\_limit and distance between EgoCar and CarAhead &lt;= SafetyDist   SlowCarAhead
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+  Prepare Lane Change   If in left\_lane: Create trajectory for lange change to middle lane and trajectory for keeping lane                                                                                                                                                                                                   
+                                                                                                                                                                                                                                                                                                                              
+                        Apply cost functions                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                                              
+                        Select trajectory with best cost                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                              
+                        In case keeping lane has better cost TRIGGER LangeChangeNotDesireable                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                                              
+                        Else TRIGGER ChangeToRight                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                              
+                        If in right\_lane: Create trajectory for lange change to middle lane and trajectory for keeping lane                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                                              
+                        Apply cost functions                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                                              
+                        Select trajectory with best cost                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                              
+                        In case keeping lane has better cost TRIGGER LangeChangeNotDesireable                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                                              
+                        Else TRIGGER ChangeToLeft                                                                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                                                                              
+                        If in middle\_lane: Create trajectories for change to left, change to right and stay in the lane. Apply cost functions                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                                              
+                        Select trajectory with best cost                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                              
+                        Cost keep lane best: TRIGGER LangeChangeNotDesireable                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                                              
+                        Cost right lane best: TRIGGER ChangeToRight                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                              
+                        Cost left lane best: TRIGGER ChangeToLeft                                                                                                                                                                                                                                                             
 
-## Project Instructions and Rubric
+  Lane Change Right     If lane change not in progress calculate trajectory for lane change else check if lane change finished (we assume that lane change are executed within 1 sec. If finished TRIGGER LaneChangeCompleted                                                                                                 ChangeToRight
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+  Lane Change Left      If lane change not in progress calculate trajectory for lane change else check if lane change finished (we assume that lane change are executed within 1 sec. If finished TRIGGER LaneChangeCompleted                                                                                                 ChangeToLeft
 
+                                                                                                                                                                                                                                                                                                                              
 
-## Call for IDE Profiles Pull Requests
+                                                                                                                                                                                                                                                                                                                              
 
-Help your fellow students!
+                                                                                                                                                                                                                                                                                                                              
 
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to ensure
-that students don't feel pressured to use one IDE or another.
+                                                                                                                                                                                                                                                                                                                              
+  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
+![](media/image8.png){width="6.295833333333333in"
+height="5.048611111111111in"}
 
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
+Overview
+========
 
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
+The goal of this project is to safely navigate around a virtual highway
+with other traffic that is driving +-10 MPH of the 50 MPH speed limit.
+The path planner gets the localization of the car and sensor fusion data
+from a simulator. A map is available that lists the waypoints around the
+highway. The car should try to go as close as possible to the 50 MPH
+speed limit, which means passing slower traffic when possible. The car
+should avoid hitting other cars at all cost as well as driving inside of
+the marked road lanes at all times, unless going from one lane to
+another. The car should be able to make one complete loop around the
+6946m highway. Since the car is trying to go 50 MPH, it should take a
+little over 5 minutes to complete 1 loop. Also the car should not
+experience total acceleration over 10 m/s\^2 and jerk that is greater
+than 10 m/s\^3.
 
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
+The following image shows successful navigation around the virtual
+highway for more that 40
+miles. ![Driving](media/image9.png){width="6.295833333333333in"
+height="4.999305555555556in"}
 
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+Safe lane changes are implemented as shown in the video. ![White
+Line](media/image10.jpeg){width="6.295833333333333in"
+height="4.722222222222222in"}
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+Files
+=====
 
+The project consists of the following files:
+
+-   [README.md](https://github.com/MarkBroerkens/CarND-Path-Planning-Project/blob/master/README.md) (writeup
+    report) documentation of the results
+
+-   [main.cpp](https://github.com/MarkBroerkens/CarND-Path-Planning-Project/blob/master/src/main.cpp) The
+    main c++ file that implements the communication with the simulator.
+
+-   [path\_planner.cpp](https://github.com/MarkBroerkens/CarND-Path-Planning-Project/blob/master/src/path_planner.cpp) The
+    actual implementation of the path planner and the generation of the
+    trajestories.
+
+-   [vehicle.cpp](https://github.com/MarkBroerkens/CarND-Path-Planning-Project/blob/master/src/vehicle.cpp) Class
+    that represents the ego vehicle or other vehicle that are detected
+    by sensor fusion.
+
+-   [util.cpp](https://github.com/MarkBroerkens/CarND-Path-Planning-Project/blob/master/src/util.cpp) Utility
+    functions
+
+Description of the Path Planner
+===============================
+
+The path planner is initialized by the main.cpp with the map of the
+highway. Based on the data from the simulator, the path planner creates
+an instance of the ego vehicle and the surrounding vehicles.
+
+Behavior
+--------
+
+The default behavior of the ego vehicle is to stay in its lane with the
+maximum speed (49.5 miles per hour). In case the prediction detects that
+the ego vehicle will get to close to a vehicle that is driving in front
+of the vehicle in the same lane, it has the following options (see
+PathPlanner::path()):
+
+-   slow down: if there is no faster lane or if it is not safe to change
+    the lane
+
+-   change lane: if a faster lane is detected and it is safe to change
+    the lane
+
+### Safety distance
+
+The safe distance to a car that is driving in front of the ego vehicle
+is calculated in PathPlanner::safetyDistance based on the speed of the
+ego vehicle:
+
+**double** PathPlanner**::**safetyDistance(**double** speed\_mps) {
+
+*// see
+http://www.softschools.com/formulas/physics/stopping\_distance\_formula/89/*
+
+**double** reaction\_distance **=** speed\_mps **\*** REACTION\_TIME\_S;
+
+**double** brake\_distance **=** (speed\_mps **\*** speed\_mps)
+
+**/** (2 **\*** CAR\_COEFFICIENT\_OF\_FRICION **\***
+CAR\_ACCELERATION\_DUE\_TO\_GRAVITY\_MPS2);
+
+**return** reaction\_distance **+** brake\_distance;
+
+}
+
+### Prediction
+
+The prediction of the location of the ego vehicle is defined by the end
+of the previous path that was calculated in the previous iteration.
+
+The prediction of the location of other vehicles that are driving in
+front of the vehicle is calcluated according to the follwing expression:
+
+check\_car\_s **+=** ((**double**) prev\_size **\*** TICK\_S **\***
+check\_speed);
+
+### Identification of the fastest lane
+
+For each lane the minimum lane speed is calculated based on the cars
+that are visible in the range of the front sensor or up to 10 meters
+behind the ego vehicle. This helps avoiding collision with vehicles that
+are directly next to the ego vehicle.
+
+**double** PathPlanner**::**laneSpeed(**int** lane) {
+
+**double** lane\_speed **=**
+milesPerHourToMetersPerSecond(MAX\_SPEED\_MPH);
+
+**for** (Vehicle vehicle **:** vehicles) {
+
+**if** (vehicle.lane **==** lane) {
+
+**double** distance\_to\_vehicle\_ahead **=** wrappedDistance(ego.s,
+vehicle.s);
+
+**double** distance\_to\_vehicle\_behind **=**
+wrappedDistance(vehicle.s, ego.s);
+
+**if** (((distance\_to\_vehicle\_ahead **&lt;** FRONT\_SENSOR\_RANGE\_M)
+**||** (distance\_to\_vehicle\_behind **&lt;** 10))
+
+**&&** (vehicle.speed **&lt;** lane\_speed)) {
+
+lane\_speed **=** vehicle.speed;
+
+}
+
+}
+
+}
+
+**return** lane\_speed;
+
+}
+
+In order to select the fastest lane, we iterate over all lanes and
+select the fastest lane. If several lanes allow the same fastest speed,
+the lane that is closest to the ego vehicle is chosen. This helps
+avoiding unnecessary lane changes.
+
+**int** PathPlanner**::**fastestLane() {
+
+**int** fastest\_lane **=** ego.lane;
+
+**double** fastest\_speed **=** laneSpeed(fastest\_lane);
+
+**for** (**int** lane **=** 0; lane **&lt;** NUMBER\_OF\_LANES;
+lane**++**) {
+
+**double** lane\_speed **=** laneSpeed(lane);
+
+**if** ((lane\_speed **&gt;** fastest\_speed)
+
+**||** ((lane\_speed **==** fastest\_speed)
+
+**&&** (fabs(lane **-** ego.lane) **&lt;** fabs(fastest\_lane **-**
+ego.lane)))) {
+
+fastest\_speed **=** lane\_speed;
+
+fastest\_lane **=** lane;
+
+}
+
+}
+
+**return** fastest\_lane;
+
+}
+
+### Safety
+
+The behavior planner makes sure that the ego vehicle stays in its lane
+if a lane change is not safe. A lane change is considered safe if there
+is no other vehicle in the target lane within the safety distance of the
+ego vehicle in front and the safety distance of any vehicle in the
+target lane.
+
+**double** PathPlanner**::**safetyCosts(**int** lane) {
+
+*// find vehicles in the lane that might cause trouble*
+
+*// cars in the safety distance before or behind us*
+
+**double** safety\_costs **=** 0.0;
+
+**for** (Vehicle vehicle **:** vehicles) {
+
+**if** (vehicle.lane **==** lane) {
+
+**if** ((wrappedDistance(vehicle.s, ego.s) **&lt;**
+safetyDistance(vehicle.speed)) */\* ego in front of vehicle \*/*
+
+**||** (wrappedDistance(ego.s, vehicle.s) **&lt;**
+safetyDistance(ego.speed)) */\* ego vehicle in front of ego \*/*) {
+
+safety\_costs **+=** 1.0;
+
+}
+
+}
+
+}
+
+**return** safety\_costs;
+
+}
+
+### Calculation of distance when a new lap of the highway is started
+
+The simulator restarts the driven distance of the track after
+TRACK\_LENGTH\_M meters. A helper function helps to calculate the
+distance even if the vehicles enter a new lap:
+
+**double** PathPlanner**::**wrappedDistance(**double** back\_s,
+**double** front\_s) {
+
+**double** distance **=** (front\_s **-** back\_s **+**
+TRACK\_LENGTH\_M) **-** TRACK\_LENGTH\_M;
+
+**if** (distance **&lt;** 0) {
+
+distance **=** TRACK\_LENGTH\_M **+** distance;
+
+}
+
+**return** distance;
+
+}
+
+### Trajestory
+
+A smooth trajestory is calculated using a spline that contains some
+previous path points of the ego vehicle and some future points from the
+map. The actual future path points of the ego vehicle are derived from
+the spline. This helps to avoid jerk.
+
+In order to avoid abrupt changes of the velocity, we incrementally
+increase or decrease the distance between the points of the path.
+
+Reflection
+==========
+
+The implementation of the path planner work pretty well. However, it
+doesn’t yet consider misbehaviour of other vehicles which could get to
+close to the ego vehicle.
+
+For future enhancements of the code I would continue the modularization
+into Behavior planner and trajestory planner. Especially, the
+implementation of a statechart for behavior planning and the evaluation
+of different behaviours and trajestories based on cost functions would
+improve the code of the path planner.
