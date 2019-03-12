@@ -226,8 +226,9 @@ bool Prediction::overlap(vector<double> a, vector<double> b) {
   return false;
 }
 
+// Uses the separation of axis theorem to detect collisions
 bool Prediction::checkCollision(double s0, double d0, double theta0, double s1, double d1, double theta1) {
-  /* IMPLEMENT SEPERATION OF AXIS THEOREM for collision detection */
+  
   // set safety distance (to vehicle heading)
   double safety_dist_lon = cfg_.carSafetyLength();
   double safety_dist_lat = cfg_.carSafetyWidth();
