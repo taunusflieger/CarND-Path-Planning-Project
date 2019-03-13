@@ -16,7 +16,8 @@
         "functional": "cpp",
         "core": "cpp",
         "ostream": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "limits": "cpp"
     },
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 10000,

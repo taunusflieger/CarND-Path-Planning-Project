@@ -20,13 +20,13 @@ void Map::LoadData(string &filename) {
 
   cout << "Speed Limit: " << cfg_.speedLimit() << endl;
   double prev_x, prev_y;
-  double max_dist = 0, min_dist = MAXFLOAT;
+  double max_dist = 0, min_dist = std::numeric_limits<double>::max();
   double total_dist = 0;
   int line_cnt = 0;
   while (getline(in_map, line)) {
     istringstream iss(line);
     double x, y;
-    float s, d_x, d_y;
+    double s, d_x, d_y;
 
     iss >> x;
     iss >> y;
@@ -90,7 +90,7 @@ void Map::LoadData(string &filename) {
   // Create new high resultion map using the spline functions
   total_dist = 0;
   max_dist = 0;
-  min_dist = MAXFLOAT;
+  min_dist = std::numeric_limits<double>::max();
   prev_x = spline_x_(0);
   prev_y = spline_y_(0);
   int idx = 0;
@@ -130,7 +130,7 @@ double Map::distance(double x1, double y1, double x2, double y2) {
 
 int Map::ClosestWaypoint2(double x, double y) {
   const int window_size = 60;
-  double closestDist = INFINITY; 
+  double closestDist = std::numeric_limits<double>::infinity(); 
   int closestWaypoint = 0;
 
   // Coarse search through the map to identify area for
@@ -149,7 +149,7 @@ int Map::ClosestWaypoint2(double x, double y) {
 
   // Search within the identified segment for the
   // optimal matching point
-  closestDist = INFINITY;
+  closestDist = std::numeric_limits<double>::infinity();
   int start_idx = closestWaypoint - window_size;
   int end_idx = closestWaypoint + window_size;
 
@@ -172,7 +172,7 @@ int Map::ClosestWaypoint2(double x, double y) {
 }
 
 int Map::ClosestWaypoint(double x, double y) {
-  double closestLen = INFINITY; 
+  double closestLen = std::numeric_limits<double>::infinity(); 
   int closestWaypoint = 0;
 
   for (int i = 0; i < high_res_map_waypoints_x_.size(); i++) {

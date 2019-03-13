@@ -5,7 +5,7 @@
 //  these options and chooses the least cost option to define a
 //  new target for the egocar
 // =================================================================
-#include <behavior.h>
+#include "behavior.h"
 #include "cost.h"
 #include "log.h"
 #include "trajectory.h"
@@ -101,7 +101,7 @@ void Behavior::PerformPrepLaneChange(std::vector<Vehicle> &otherCars,
     traj_candidates.push_back(tc);
   }
 
-  double min_cost = MAXFLOAT;
+  double min_cost = std::numeric_limits<double>::max();
 
   TrajectoryJMT jmt_traj;
 

@@ -72,8 +72,8 @@ Prediction::getNearbyFrontCars() {
 }
 
 std::vector<int> Prediction::getNearbyCars(std::vector<Vehicle> &otherCars) {
-  std::vector<double> distance_back_object = {INFINITY, INFINITY, INFINITY};
-  std::vector<double> distance_front_object = {INFINITY, INFINITY, INFINITY};
+  std::vector<double> distance_back_object = {std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity()};
+  std::vector<double> distance_front_object = {std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity()};
 
   // Define range to search for nearby cars
   // Handle FOV and s wraparound
