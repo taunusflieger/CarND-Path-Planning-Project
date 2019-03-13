@@ -17,10 +17,10 @@ set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
 set(sources src/main.cpp src/config.cpp src/map.cpp src/vehicle.cpp src/jmt.cpp src/trajectory.cpp src/behavior.cpp src/prediction.cpp src/cost.cpp)
 
+include_directories(src/include)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 
-include_directories(src/include)
 include_directories(/usr/local/include)
 include_directories(/usr/local/opt/openssl/include)
 link_directories(/usr/local/lib)
