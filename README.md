@@ -51,7 +51,9 @@ For lane changes the required trajectories are calculated using the jerk minimiz
 Due to communication latency between the simulator and path planner, a portion of the previous path (~0.5 sec) is kept as a buffer and the new path is appended after that to keep smooth continuous transitions. Non lane changing trajectories which require acceleration or deceleration calculated in frenet coordinates (s,d) which makes changing acceleration easier.
 
 
-
+Starting the application
+====================
+The compiled program needs to be started from within the base directory of the repository. Assuming a build directory called "build" has been created within the base directory, start the application in a terminal using "./build/path_planning"
 
 Reflection
 ==========
